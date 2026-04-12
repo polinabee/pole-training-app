@@ -1,5 +1,3 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # dependencies
 node_modules/
 
@@ -9,19 +7,14 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Generated native folders (run `npx expo run:ios` to regenerate)
+/ios
+/android
 
 # Metro
 .metro-health-check*
 
-# debug
+# Debug logs
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -30,12 +23,29 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Environment files
+.env
+.env.local
 .env*.local
 
-# typescript
+# TypeScript build info
 *.tsbuildinfo
 
-# generated native folders
-/ios
-/android
+# iOS signing artifacts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Xcode
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+
+# CocoaPods (ios/ is ignored, but just in case)
+Pods/
+
+# Kotlin (android)
+.kotlin/

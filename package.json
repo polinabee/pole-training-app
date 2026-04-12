@@ -1,22 +1,39 @@
 {
   "name": "pos-pole",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~54.0.33",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "@react-navigation/elements": "^2.9.14",
+    "@react-navigation/native": "^7.0.14",
+    "expo": "~52.0.46",
+    "expo-asset": "~11.0.5",
+    "expo-av": "~15.0.2",
+    "expo-crypto": "~14.0.2",
+    "expo-font": "~13.0.4",
+    "expo-image-picker": "~16.0.6",
+    "expo-linking": "~7.0.5",
+    "expo-media-library": "~17.0.6",
+    "expo-modules-core": "~2.2.3",
+    "expo-router": "~4.0.20",
+    "expo-splash-screen": "~0.29.24",
+    "expo-sqlite": "~15.1.4",
+    "expo-status-bar": "~2.0.1",
+    "react": "18.3.1",
+    "react-native": "0.76.9",
+    "react-native-gesture-handler": "~2.20.2",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "@types/react": "~18.3.12",
+    "typescript": "~5.3.3"
   },
   "private": true
 }
