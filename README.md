@@ -69,6 +69,10 @@ src/
   components/          # Shared UI components
 ```
 
+## License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE). Free to use, forks must be open source and credit the original author.
+
 ## Roadmap
 
 - **V2** — Spaced repetition (SM-2), combo builder, gamification
