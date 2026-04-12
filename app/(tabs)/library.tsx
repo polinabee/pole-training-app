@@ -12,9 +12,10 @@ import { useRouter } from 'expo-router';
 import { useTricksStore } from '../../src/stores/tricksStore';
 import { TrickCard } from '../../src/components/TrickCard';
 import { FilterBar } from '../../src/components/FilterBar';
+import type { StatusFilter } from '../../src/components/FilterBar';
 import { colors } from '../../src/constants/colors';
 import { PREDEFINED_TAGS } from '../../src/constants/tags';
-import type { PoleType } from '../../src/types';
+import type { PoleType, TrickStatus } from '../../src/types';
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -24,8 +25,9 @@ export default function LibraryScreen() {
 
   const [search, setSearch] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedPoleType, setSelectedPoleType] = useState<string | null>(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<number | null>(null);
+  const [selectedPoleTypes, setSelectedPoleTypes] = useState<string[]>([]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState<number[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<StatusFilter[]>([]);
   const [addModalVisible, setAddModalVisible] = useState(false);
 
   // New trick form state
@@ -34,22 +36,40 @@ export default function LibraryScreen() {
   const [newPoleType, setNewPoleType] = useState<PoleType>('both');
   const [newHasSides, setNewHasSides] = useState(true);
   const [newTags, setNewTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState('');
+
+  // All unique custom tags across all tricks (not in predefined list)
+  const customTags = useMemo(() => {
+    const predefined = new Set(PREDEFINED_TAGS as readonly string[]);
+    const all = new Set<string>();
+    for (const t of tricks) {
+      for (const tag of t.tags) {
+        if (!predefined.has(tag)) all.add(tag);
+      }
+    }
+    return Array.from(all).sort();
+  }, [tricks]);
 
   const filtered = useMemo(() => {
     return tricks.filter((t) => {
       if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (selectedPoleType && t.poleType !== selectedPoleType) return false;
-      if (selectedDifficulty && t.difficulty !== selectedDifficulty) return false;
+      if (selectedPoleTypes.length > 0 && !selectedPoleTypes.includes(t.poleType)) return false;
+      if (selectedDifficulties.length > 0 && !selectedDifficulties.includes(t.difficulty)) return false;
       if (selectedTags.length > 0 && !selectedTags.every((tag) => t.tags.includes(tag))) return false;
+      if (selectedStatuses.length > 0) {
+        const ut = userTricks.find((u) => u.trickId === t.id);
+        const statuses: TrickStatus[] = t.hasSides
+          ? [ut?.status_left ?? null, ut?.status_right ?? null]
+          : [ut?.status ?? null];
+        const matchesStatus = selectedStatuses.some((sf) => {
+          if (sf === 'never_tried') return statuses.every((s) => s === null);
+          return statuses.some((s) => s === sf);
+        });
+        if (!matchesStatus) return false;
+      }
       return true;
     });
-  }, [tricks, search, selectedPoleType, selectedDifficulty, selectedTags]);
-
-  function toggleTag(tag: string) {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  }
+  }, [tricks, userTricks, search, selectedPoleTypes, selectedDifficulties, selectedTags, selectedStatuses]);
 
   function handleAddTrick() {
     if (!newName.trim()) return;
@@ -67,6 +87,7 @@ export default function LibraryScreen() {
     setNewPoleType('both');
     setNewHasSides(true);
     setNewTags([]);
+    setCustomTagInput('');
     setAddModalVisible(false);
   }
 
@@ -87,12 +108,15 @@ export default function LibraryScreen() {
       </View>
 
       <FilterBar
+        selectedStatuses={selectedStatuses}
+        onStatusChange={setSelectedStatuses}
         selectedTags={selectedTags}
-        onTagPress={toggleTag}
-        selectedPoleType={selectedPoleType}
-        onPoleTypePress={setSelectedPoleType}
-        selectedDifficulty={selectedDifficulty}
-        onDifficultyPress={setSelectedDifficulty}
+        onTagChange={setSelectedTags}
+        selectedPoleTypes={selectedPoleTypes}
+        onPoleTypeChange={setSelectedPoleTypes}
+        selectedDifficulties={selectedDifficulties}
+        onDifficultyChange={setSelectedDifficulties}
+        customTags={customTags}
       />
 
       <FlatList
@@ -172,7 +196,7 @@ export default function LibraryScreen() {
 
           <Text style={styles.fieldLabel}>Tags</Text>
           <View style={styles.tagsGrid}>
-            {PREDEFINED_TAGS.map((tag) => {
+            {[...PREDEFINED_TAGS, ...newTags.filter((t) => !(PREDEFINED_TAGS as readonly string[]).includes(t))].map((tag) => {
               const active = newTags.includes(tag);
               return (
                 <Pressable
@@ -188,6 +212,21 @@ export default function LibraryScreen() {
                 </Pressable>
               );
             })}
+          </View>
+          <View style={styles.customTagRow}>
+            <TextInput
+              style={styles.customTagInput}
+              placeholder="Add custom tag..."
+              placeholderTextColor={colors.textDim}
+              value={customTagInput}
+              onChangeText={setCustomTagInput}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                const tag = customTagInput.trim().toLowerCase();
+                if (tag && !newTags.includes(tag)) setNewTags((prev) => [...prev, tag]);
+                setCustomTagInput('');
+              }}
+            />
           </View>
 
           <View style={styles.modalActions}>
@@ -328,6 +367,18 @@ const styles = StyleSheet.create({
   tagChipTextActive: {
     color: colors.bg,
     fontWeight: '700',
+  },
+  customTagRow: {
+    marginBottom: 16,
+  },
+  customTagInput: {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalActions: {
     flexDirection: 'row',

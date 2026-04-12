@@ -2,17 +2,20 @@ import { create } from 'zustand';
 import * as Crypto from 'expo-crypto';
 import { getDb } from '../db';
 import { useTricksStore } from './tricksStore';
-import type { TrainingSession, SessionTrick, SessionSide } from '../types';
+import type { TrainingSession, SessionTrick, SessionSide, PoleMode } from '../types';
 
 interface SessionsState {
   sessions: TrainingSession[];
   sessionTricks: SessionTrick[];
   load: () => void;
-  createSession: (date: string, notes?: string) => string;
+  createSession: (date: string, title?: string, notes?: string) => string;
   updateSessionNotes: (sessionId: string, notes: string) => void;
-  addSessionTrick: (sessionId: string, trickId: string, side: SessionSide) => void;
+  updateSessionTitle: (sessionId: string, title: string) => void;
+  addSessionTrick: (sessionId: string, trickId: string, side: SessionSide, poleMode: PoleMode, reps?: number) => void;
   removeSessionTrick: (sessionTrickId: string) => void;
   getSessionTricks: (sessionId: string) => SessionTrick[];
+  updateSessionTrick: (sessionTrickId: string, side: SessionSide, poleMode: PoleMode, reps: number) => void;
+  updateCompletedReps: (sessionTrickId: string, completedReps: number) => void;
   deleteSession: (sessionId: string) => void;
 }
 
@@ -20,6 +23,7 @@ function rowToSession(row: Record<string, unknown>): TrainingSession {
   return {
     id: row.id as string,
     date: row.date as string,
+    title: (row.title as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
   };
 }
@@ -30,6 +34,9 @@ function rowToSessionTrick(row: Record<string, unknown>): SessionTrick {
     sessionId: row.sessionId as string,
     trickId: row.trickId as string,
     side: row.side as SessionSide,
+    poleMode: (row.poleMode as PoleMode) ?? null,
+    reps: (row.reps as number) ?? 1,
+    completedReps: (row.completed_reps as number) ?? 0,
   };
 }
 
@@ -67,14 +74,14 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
     });
   },
 
-  createSession(date, notes) {
+  createSession(date, title, notes) {
     const db = getDb();
     const id = Crypto.randomUUID();
     db.runSync(
-      'INSERT INTO training_sessions (id, date, notes) VALUES (?, ?, ?)',
-      [id, date, notes ?? null]
+      'INSERT INTO training_sessions (id, date, title, notes) VALUES (?, ?, ?, ?)',
+      [id, date, title ?? null, notes ?? null]
     );
-    const newSession: TrainingSession = { id, date, notes: notes ?? null };
+    const newSession: TrainingSession = { id, date, title: title ?? null, notes: notes ?? null };
     set((state) => ({
       sessions: [newSession, ...state.sessions],
     }));
@@ -89,14 +96,22 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
     }));
   },
 
-  addSessionTrick(sessionId, trickId, side) {
+  updateSessionTitle(sessionId, title) {
+    const db = getDb();
+    db.runSync('UPDATE training_sessions SET title = ? WHERE id = ?', [title, sessionId]);
+    set((state) => ({
+      sessions: state.sessions.map((s) => (s.id === sessionId ? { ...s, title } : s)),
+    }));
+  },
+
+  addSessionTrick(sessionId, trickId, side, poleMode, reps = 1) {
     const db = getDb();
     const id = Crypto.randomUUID();
     db.runSync(
-      'INSERT INTO session_tricks (id, sessionId, trickId, side) VALUES (?, ?, ?, ?)',
-      [id, sessionId, trickId, side]
+      'INSERT INTO session_tricks (id, sessionId, trickId, side, poleMode, reps) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, sessionId, trickId, side, poleMode ?? null, reps]
     );
-    const newST: SessionTrick = { id, sessionId, trickId, side };
+    const newST: SessionTrick = { id, sessionId, trickId, side, poleMode, reps, completedReps: 0 };
     set((state) => ({ sessionTricks: [...state.sessionTricks, newST] }));
     updateLastPracticed(trickId, side);
   },
@@ -111,6 +126,29 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
 
   getSessionTricks(sessionId) {
     return get().sessionTricks.filter((st) => st.sessionId === sessionId);
+  },
+
+  updateSessionTrick(sessionTrickId, side, poleMode, reps) {
+    const db = getDb();
+    db.runSync(
+      'UPDATE session_tricks SET side = ?, poleMode = ?, reps = ? WHERE id = ?',
+      [side, poleMode ?? null, reps, sessionTrickId]
+    );
+    set((state) => ({
+      sessionTricks: state.sessionTricks.map((st) =>
+        st.id === sessionTrickId ? { ...st, side, poleMode, reps } : st
+      ),
+    }));
+  },
+
+  updateCompletedReps(sessionTrickId, completedReps) {
+    const db = getDb();
+    db.runSync('UPDATE session_tricks SET completed_reps = ? WHERE id = ?', [completedReps, sessionTrickId]);
+    set((state) => ({
+      sessionTricks: state.sessionTricks.map((st) =>
+        st.id === sessionTrickId ? { ...st, completedReps } : st
+      ),
+    }));
   },
 
   deleteSession(sessionId) {

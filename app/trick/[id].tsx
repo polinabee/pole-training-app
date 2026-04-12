@@ -1,20 +1,18 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ScrollView,
   View,
   Text,
   TextInput,
+  TouchableOpacity,
   Pressable,
   StyleSheet,
   Alert,
 } from 'react-native';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useTricksStore } from '../../src/stores/tricksStore';
-import { useVideosStore } from '../../src/stores/videosStore';
 import { SideStatusPicker } from '../../src/components/SideStatusPicker';
 import { DifficultyDots } from '../../src/components/DifficultyDots';
-import { VideoThumbnail } from '../../src/components/VideoThumbnail';
 import { colors } from '../../src/constants/colors';
 import type { TrickStatus } from '../../src/types';
 
@@ -28,46 +26,25 @@ export default function TrickDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
 
+  const router = useRouter();
   const tricks = useTricksStore((s) => s.tricks);
-  const getUserTrick = useTricksStore((s) => s.getUserTrick);
+  const userTricks = useTricksStore((s) => s.userTricks);
   const upsertUserTrick = useTricksStore((s) => s.upsertUserTrick);
-
-  const getVideosForTrick = useVideosStore((s) => s.getVideosForTrick);
-  const addVideo = useVideosStore((s) => s.addVideo);
-  const removeVideo = useVideosStore((s) => s.removeVideo);
-  const updateVideoNotes = useVideosStore((s) => s.updateVideoNotes);
+  const deleteCustomTrick = useTricksStore((s) => s.deleteCustomTrick);
+  const updateTrickTags = useTricksStore((s) => s.updateTrickTags);
 
   const trick = tricks.find((t) => t.id === id);
-  const userTrick = trick ? getUserTrick(trick.id) : undefined;
-  const videos = trick ? getVideosForTrick(trick.id) : [];
+  const userTrick = userTricks.find((ut) => ut.trickId === id);
 
   const [notesLeft, setNotesLeft] = useState(userTrick?.notes_left ?? '');
   const [notesRight, setNotesRight] = useState(userTrick?.notes_right ?? '');
   const [notesNoSide, setNotesNoSide] = useState(userTrick?.notes_left ?? '');
+  const [tagInput, setTagInput] = useState('');
+  const tagInputRef = useRef<TextInput>(null);
 
   React.useEffect(() => {
     if (trick) navigation.setOptions({ title: trick.name });
   }, [trick?.name]);
-
-  const pickVideo = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow access to your photo library to attach videos.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['videos'],
-      quality: 1,
-    });
-    if (!result.canceled && result.assets[0]) {
-      addVideo({
-        localUri: result.assets[0].uri,
-        trickId: id ?? null,
-        sessionId: null,
-        notes: null,
-      });
-    }
-  }, [id, addVideo]);
 
   if (!trick) {
     return (
@@ -87,16 +64,49 @@ export default function TrickDetailScreen() {
 
       <View style={styles.tagsRow}>
         {trick.tags.map((tag) => (
-          <View key={tag} style={styles.tag}>
+          <TouchableOpacity
+            key={tag}
+            activeOpacity={0.7}
+            style={styles.tag}
+            onLongPress={() =>
+              Alert.alert('Remove tag', `Remove "${tag}"?`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Remove', style: 'destructive', onPress: () => updateTrickTags(trick.id, trick.tags.filter((t) => t !== tag)) },
+              ])
+            }
+          >
             <Text style={styles.tagText}>{tag}</Text>
-          </View>
+          </TouchableOpacity>
         ))}
         {trick.isCustom ? (
           <View style={[styles.tag, styles.customTag]}>
             <Text style={[styles.tagText, styles.customTagText]}>custom</Text>
           </View>
         ) : null}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.addTagBtn}
+          onPress={() => tagInputRef.current?.focus()}
+        >
+          <Text style={styles.addTagBtnText}>+ tag</Text>
+        </TouchableOpacity>
       </View>
+      <TextInput
+        ref={tagInputRef}
+        style={styles.tagInput}
+        placeholder="New tag..."
+        placeholderTextColor={colors.textDim}
+        value={tagInput}
+        onChangeText={setTagInput}
+        returnKeyType="done"
+        onSubmitEditing={() => {
+          const tag = tagInput.trim().toLowerCase();
+          if (tag && !trick.tags.includes(tag)) {
+            updateTrickTags(trick.id, [...trick.tags, tag]);
+          }
+          setTagInput('');
+        }}
+      />
 
       <View style={styles.divider} />
 
@@ -155,24 +165,28 @@ export default function TrickDetailScreen() {
 
       <View style={styles.divider} />
 
-      {/* Videos */}
-      <Section title="Videos">
-        {videos.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.videosRow}>
-            {videos.map((v) => (
-              <VideoThumbnail
-                key={v.id}
-                video={v}
-                onRemove={() => removeVideo(v.id)}
-                onNotesChange={(notes) => updateVideoNotes(v.id, notes)}
-              />
-            ))}
-          </ScrollView>
-        ) : null}
-        <Pressable style={styles.addVideoBtn} onPress={pickVideo}>
-          <Text style={styles.addVideoBtnText}>+ Attach Video</Text>
-        </Pressable>
-      </Section>
+      {/* Delete (custom tricks only) */}
+      {trick.isCustom ? (
+        <>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.deleteBtn}
+            onPress={() =>
+              Alert.alert('Delete trick', `Delete "${trick.name}"? This cannot be undone.`, [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => { deleteCustomTrick(trick.id); router.back(); },
+                },
+              ])
+            }
+          >
+            <Text style={styles.deleteBtnText}>Delete Trick</Text>
+          </Pressable>
+        </>
+      ) : null}
+
     </ScrollView>
   );
 }
@@ -229,6 +243,29 @@ const styles = StyleSheet.create({
   customTagText: {
     color: colors.accent,
   },
+  addTagBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  addTagBtnText: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  tagInput: {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+  },
   divider: {
     height: 1,
     backgroundColor: colors.border,
@@ -256,19 +293,15 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  videosRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  addVideoBtn: {
+  deleteBtn: {
     padding: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.error,
     alignItems: 'center',
   },
-  addVideoBtnText: {
-    color: colors.accent,
+  deleteBtnText: {
+    color: colors.error,
     fontWeight: '600',
     fontSize: 14,
   },

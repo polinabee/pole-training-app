@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors } from '../constants/colors';
 import type { TrickStatus } from '../types';
 
@@ -23,9 +23,10 @@ export function SideStatusPicker({ value, onChange, label }: Props) {
         {OPTIONS.map((opt) => {
           const isActive = value === opt.value;
           return (
-            <Pressable
+            <TouchableOpacity
               key={opt.value}
               onPress={() => onChange(isActive ? null : opt.value)}
+              activeOpacity={0.5}
               style={[
                 styles.btn,
                 isActive && { backgroundColor: opt.color, borderColor: opt.color },
@@ -39,7 +40,7 @@ export function SideStatusPicker({ value, onChange, label }: Props) {
               >
                 {opt.label}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           );
         })}
       </View>

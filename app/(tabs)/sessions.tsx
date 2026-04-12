@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Modal, TextInput, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSessionsStore } from '../../src/stores/sessionsStore';
+import { CalendarPicker } from '../../src/components/CalendarPicker';
 import { colors } from '../../src/constants/colors';
+
+function todayISO(): string {
+  return new Date().toISOString().split('T')[0];
+}
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -17,10 +22,19 @@ export default function SessionsScreen() {
   const deleteSession = useSessionsStore((s) => s.deleteSession);
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [pickedDate, setPickedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [pickedDate, setPickedDate] = useState(todayISO);
+  const [title, setTitle] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  function openModal() {
+    setPickedDate(todayISO());
+    setTitle('');
+    setShowCalendar(false);
+    setModalVisible(true);
+  }
 
   function handleCreate() {
-    const id = createSession(pickedDate);
+    const id = createSession(pickedDate, title.trim() || undefined);
     setModalVisible(false);
     router.push(`/session/${id}`);
   }
@@ -44,41 +58,60 @@ export default function SessionsScreen() {
             <Pressable
               style={({ pressed }) => [styles.card, pressed && styles.pressed]}
               onPress={() => router.push(`/session/${item.id}`)}
-              onLongPress={() => {
-                deleteSession(item.id);
-              }}
+              onLongPress={() => deleteSession(item.id)}
             >
               <View style={styles.cardMain}>
-                <Text style={styles.date}>{formatDate(item.date)}</Text>
+                <View style={styles.cardLeft}>
+                  {item.title ? <Text style={styles.cardTitle}>{item.title}</Text> : null}
+                  <Text style={[styles.date, item.title && styles.dateSub]}>{formatDate(item.date)}</Text>
+                </View>
                 <Text style={styles.count}>{count} trick{count !== 1 ? 's' : ''}</Text>
               </View>
               {item.notes ? (
-                <Text style={styles.notes} numberOfLines={2}>
-                  {item.notes}
-                </Text>
+                <Text style={styles.notes} numberOfLines={2}>{item.notes}</Text>
               ) : null}
             </Pressable>
           );
         }}
       />
 
-      <Pressable style={styles.fab} onPress={() => setModalVisible(true)}>
+      <Pressable style={styles.fab} onPress={openModal}>
         <Text style={styles.fabText}>+ New Session</Text>
       </Pressable>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <View style={styles.modalSheet}>
+          <ScrollView
+            style={styles.modalSheet}
+            contentContainerStyle={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            onStartShouldSetResponder={() => true}
+          >
             <Text style={styles.modalTitle}>New Session</Text>
-            <Text style={styles.fieldLabel}>Date</Text>
+
+            <Text style={styles.fieldLabel}>Title (optional)</Text>
             <TextInput
-              style={styles.dateInput}
-              value={pickedDate}
-              onChangeText={setPickedDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textDim}
-              keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g. Inversions day"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="done"
             />
+
+            <Text style={styles.fieldLabel}>Date</Text>
+            <Pressable style={styles.datePressable} onPress={() => setShowCalendar((v) => !v)}>
+              <Text style={styles.dateValue}>{formatDate(pickedDate)}</Text>
+              <Text style={styles.chevron}>{showCalendar ? '▲' : '▼'}</Text>
+            </Pressable>
+
+            {showCalendar ? (
+              <CalendarPicker
+                value={pickedDate}
+                onChange={(d) => { setPickedDate(d); setShowCalendar(false); }}
+              />
+            ) : null}
+
             <View style={styles.modalActions}>
               <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -87,7 +120,7 @@ export default function SessionsScreen() {
                 <Text style={styles.createBtnText}>Create</Text>
               </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </Pressable>
       </Modal>
     </View>
@@ -95,14 +128,8 @@ export default function SessionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  list: {
-    padding: 16,
-    paddingBottom: 100,
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  list: { padding: 16, paddingBottom: 100 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -112,41 +139,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pressed: { opacity: 0.7 },
-  cardMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  date: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  count: {
-    color: colors.accent,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  notes: {
-    color: colors.textMuted,
-    fontSize: 13,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingTop: 80,
-    gap: 8,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  emptySub: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
+  cardMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardLeft: { flex: 1, gap: 2 },
+  cardTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  date: { color: colors.text, fontSize: 15, fontWeight: '500' },
+  dateSub: { color: colors.textMuted, fontSize: 13, fontWeight: '400' },
+  count: { color: colors.accent, fontSize: 13, fontWeight: '700' },
+  notes: { color: colors.textMuted, fontSize: 13 },
+  emptyContainer: { alignItems: 'center', paddingTop: 80, gap: 8 },
+  emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '600' },
+  emptySub: { color: colors.textMuted, fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -157,28 +159,16 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  fabText: {
-    color: colors.bg,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
+  fabText: { color: colors.bg, fontWeight: '700', fontSize: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 24,
-    gap: 14,
+    maxHeight: '90%',
   },
-  modalTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-  },
+  modalContent: { padding: 24, gap: 12 },
+  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 },
   fieldLabel: {
     color: colors.textMuted,
     fontSize: 12,
@@ -186,34 +176,33 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  dateInput: {
+  input: {
     backgroundColor: colors.surfaceHigh,
     color: colors.text,
     borderRadius: 10,
     padding: 14,
-    fontSize: 16,
+    fontSize: 15,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: 14,
+  datePressable: {
+    backgroundColor: colors.surfaceHigh,
     borderRadius: 10,
+    padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  dateValue: { color: colors.text, fontSize: 15 },
+  chevron: { color: colors.textMuted, fontSize: 12 },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  cancelBtn: {
+    flex: 1, padding: 14, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
   cancelBtnText: { color: colors.textMuted, fontWeight: '600' },
-  createBtn: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-  },
+  createBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center' },
   createBtnText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
 });

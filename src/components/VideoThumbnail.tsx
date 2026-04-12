@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, TextInput } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, Modal, TextInput } from 'react-native';
 import { Video, ResizeMode, type AVPlaybackStatus } from 'expo-av';
 import { colors } from '../constants/colors';
 import type { Video as VideoType } from '../types';
@@ -43,12 +43,28 @@ export function VideoThumbnail({ video, onRemove, onNotesChange }: Props) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalBg}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity activeOpacity={0.7} style={styles.closeBtn} onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeBtnText}>✕ Close</Text>
+            </TouchableOpacity>
+            {onRemove ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.removeBtn}
+                onPress={() => {
+                  setModalVisible(false);
+                  onRemove();
+                }}
+              >
+                <Text style={styles.removeBtnText}>Remove</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <Video
             source={{ uri: video.localUri }}
             style={styles.fullVideo}
             resizeMode={ResizeMode.CONTAIN}
             useNativeControls
-            shouldPlay
           />
           <View style={styles.modalContent}>
             <TextInput
@@ -59,20 +75,6 @@ export function VideoThumbnail({ video, onRemove, onNotesChange }: Props) {
               placeholderTextColor={colors.textDim}
               multiline
             />
-            {onRemove ? (
-              <Pressable
-                style={styles.removeBtn}
-                onPress={() => {
-                  setModalVisible(false);
-                  onRemove();
-                }}
-              >
-                <Text style={styles.removeBtnText}>Remove Video</Text>
-              </Pressable>
-            ) : null}
-            <Pressable style={styles.closeBtn} onPress={() => setModalVisible(false)}>
-              <Text style={styles.closeBtnText}>Close</Text>
-            </Pressable>
           </View>
         </View>
       </Modal>
@@ -120,6 +122,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 56,
+  },
+  closeBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  closeBtnText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  removeBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  removeBtnText: {
+    color: colors.error,
+    fontWeight: '600',
+    fontSize: 14,
+  },
   fullVideo: {
     width: '100%',
     aspectRatio: 9 / 16,
@@ -139,26 +173,5 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     minHeight: 80,
     textAlignVertical: 'top',
-  },
-  removeBtn: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.error,
-    alignItems: 'center',
-  },
-  removeBtnText: {
-    color: colors.error,
-    fontWeight: '600',
-  },
-  closeBtn: {
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-  },
-  closeBtnText: {
-    color: colors.text,
-    fontWeight: '600',
   },
 });

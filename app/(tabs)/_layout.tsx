@@ -5,6 +5,7 @@ import { colors } from '../../src/constants/colors';
 export default function TabsLayout() {
   return (
     <Tabs
+      initialRouteName="library"
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
@@ -22,10 +23,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{
-          title: 'Practice',
-          tabBarLabel: 'Practice',
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="library"

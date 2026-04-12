@@ -10,6 +10,8 @@ interface TricksState {
   getUserTrick: (trickId: string) => UserTrick | undefined;
   upsertUserTrick: (trickId: string, patch: Partial<Omit<UserTrick, 'id' | 'trickId'>>) => void;
   addCustomTrick: (trick: Omit<Trick, 'id' | 'isCustom' | 'prerequisiteIds'>) => void;
+  deleteCustomTrick: (trickId: string) => void;
+  updateTrickTags: (trickId: string, tags: string[]) => void;
 }
 
 function rowToTrick(row: Record<string, unknown>): Trick {
@@ -127,6 +129,26 @@ export const useTricksStore = create<TricksState>((set, get) => ({
     const newTrick: Trick = { ...trick, id, isCustom: true, prerequisiteIds: [] };
     set((state) => ({
       tricks: [...state.tricks, newTrick].sort((a, b) => a.name.localeCompare(b.name)),
+    }));
+  },
+
+  updateTrickTags(trickId, tags) {
+    const db = getDb();
+    db.runSync('UPDATE tricks SET tags = ? WHERE id = ?', [JSON.stringify(tags), trickId]);
+    set((state) => ({
+      tricks: state.tricks.map((t) => (t.id === trickId ? { ...t, tags } : t)),
+    }));
+  },
+
+  deleteCustomTrick(trickId) {
+    const db = getDb();
+    db.runSync('DELETE FROM user_tricks WHERE trickId = ?', [trickId]);
+    db.runSync('DELETE FROM session_tricks WHERE trickId = ?', [trickId]);
+    db.runSync('DELETE FROM videos WHERE trickId = ?', [trickId]);
+    db.runSync('DELETE FROM tricks WHERE id = ? AND isCustom = 1', [trickId]);
+    set((state) => ({
+      tricks: state.tricks.filter((t) => t.id !== trickId),
+      userTricks: state.userTricks.filter((ut) => ut.trickId !== trickId),
     }));
   },
 }));

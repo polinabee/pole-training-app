@@ -45,14 +45,20 @@ export interface UserTrick {
 export interface TrainingSession {
   id: string;
   date: string; // ISO date
+  title: string | null;
   notes: string | null;
 }
+
+export type PoleMode = 'static' | 'spin' | null;
 
 export interface SessionTrick {
   id: string;
   sessionId: string;
   trickId: string;
   side: SessionSide;
+  poleMode: PoleMode;
+  reps: number;
+  completedReps: number;
 }
 
 export interface Video {
