@@ -39,7 +39,7 @@ async function isOnline(): Promise<boolean> {
   }
 }
 
-async function flushPendingSubmissions(userId: string): Promise<void> {
+async function flushPendingSubmissions(userId: string | null): Promise<void> {
   const db = getDb();
   const pending = db.getAllSync<{
     id: string;
@@ -53,7 +53,7 @@ async function flushPendingSubmissions(userId: string): Promise<void> {
 
   for (const row of pending) {
     const { error } = await supabase!.from('trick_submissions').insert({
-      user_id: userId,
+      user_id: userId ?? null,
       name: row.name,
       pole_type: row.pole_type,
       difficulty: row.difficulty,
@@ -97,14 +97,6 @@ export default function SuggestTrickScreen() {
       Alert.alert('Missing name', 'Please enter a trick name.');
       return;
     }
-    if (!user) {
-      Alert.alert(
-        'Sign in required',
-        'You need to sign in to suggest tricks.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -112,10 +104,10 @@ export default function SuggestTrickScreen() {
 
       if (online) {
         // Flush any queued offline submissions first
-        await flushPendingSubmissions(user.id);
+        await flushPendingSubmissions(user?.id ?? null);
 
         const { error } = await supabase!.from('trick_submissions').insert({
-          user_id: user.id,
+          user_id: user?.id ?? null,
           name: name.trim(),
           pole_type: poleType,
           difficulty,
