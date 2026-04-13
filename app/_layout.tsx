@@ -9,9 +9,7 @@ import { useTricksStore } from '../src/stores/tricksStore';
 import { useSessionsStore } from '../src/stores/sessionsStore';
 import { useVideosStore } from '../src/stores/videosStore';
 import { useAuthStore } from '../src/stores/authStore';
-import { isSupabaseConfigured } from '../src/lib/supabase';
 import { colors } from '../src/constants/colors';
-import AuthScreen from './auth';
 
 export default function RootLayout() {
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +18,7 @@ export default function RootLayout() {
   const loadSessions = useSessionsStore((s) => s.load);
   const loadVideos = useVideosStore((s) => s.load);
   const initializeAuth = useAuthStore((s) => s.initialize);
-  const user = useAuthStore((s) => s.user);
+
 
   useEffect(() => {
     // Local DB init always runs — offline-first
@@ -49,16 +47,6 @@ export default function RootLayout() {
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <Text style={{ color: colors.error, fontSize: 14, textAlign: 'center' }}>{error}</Text>
       </View>
-    );
-  }
-
-  // Only gate on auth when Supabase is configured — otherwise app works locally
-  if (isSupabaseConfigured && !user) {
-    return (
-      <>
-        <StatusBar style="light" />
-        <AuthScreen />
-      </>
     );
   }
 
