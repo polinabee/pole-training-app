@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '../src/constants/colors';
 import { useAuthStore } from '../src/stores/authStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
@@ -15,6 +16,7 @@ import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 type Mode = 'sign_in' | 'sign_up';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const [mode, setMode] = useState<Mode>('sign_in');
@@ -33,18 +35,14 @@ export default function SettingsScreen() {
           password,
         });
         if (error) throw error;
+        router.replace('/submissions');
       } else {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
         });
         if (error) throw error;
-        // Supabase may require email confirmation depending on project settings.
-        // If confirmations are disabled, user is signed in immediately.
-        Alert.alert(
-          'Account created',
-          'You are now signed in.',
-        );
+        router.replace('/submissions');
       }
     } catch (err: unknown) {
       Alert.alert('Error', (err as Error).message ?? 'Sign-in failed.');
