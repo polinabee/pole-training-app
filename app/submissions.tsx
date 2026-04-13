@@ -14,7 +14,9 @@ import { useAuthStore } from '../src/stores/authStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 import { getDb } from '../src/db';
 
-const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL;
+function getIsAdmin(user: { app_metadata?: Record<string, unknown> } | null): boolean {
+  return user?.app_metadata?.is_admin === true;
+}
 
 type RemoteSubmission = {
   id: string;
@@ -53,7 +55,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function SubmissionsScreen() {
   const user = useAuthStore((s) => s.user);
-  const isAdmin = Boolean(ADMIN_EMAIL && user?.email === ADMIN_EMAIL);
+  const admin = getIsAdmin(user);
 
   const [remote, setRemote] = useState<RemoteSubmission[]>([]);
   const [local, setLocal] = useState<LocalSubmission[]>([]);
@@ -70,7 +72,7 @@ export default function SubmissionsScreen() {
 
     // Load from Supabase if configured
     if (isSupabaseConfigured && supabase) {
-      const query = isAdmin
+      const query = admin
         ? supabase
             .from('trick_submissions')
             .select('id, name, pole_type, difficulty, notes, status, created_at, user_id')
@@ -87,7 +89,7 @@ export default function SubmissionsScreen() {
 
     setLoading(false);
     setRefreshing(false);
-  }, [isAdmin, user?.id]);
+  }, [admin, user?.id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -140,17 +142,17 @@ export default function SubmissionsScreen() {
 
   const sections: { title: string; data: (RemoteSubmission | LocalSubmission)[] }[] = [];
 
-  if (isAdmin && remote.filter((r) => r.status === 'pending').length > 0) {
+  if (admin && remote.filter((r) => r.status === 'pending').length > 0) {
     sections.push({ title: 'Pending Review', data: remote.filter((r) => r.status === 'pending') });
   }
   if (local.length > 0) {
     sections.push({ title: 'Queued (offline)', data: local });
   }
-  const sent = isAdmin
+  const sent = admin
     ? remote.filter((r) => r.status !== 'pending')
     : remote;
   if (sent.length > 0) {
-    sections.push({ title: isAdmin ? 'Reviewed' : 'Your Submissions', data: sent });
+    sections.push({ title: admin ? 'Reviewed' : 'Your Submissions', data: sent });
   }
 
   const allItems = sections.flatMap((s) => [
@@ -199,12 +201,12 @@ export default function SubmissionsScreen() {
             </View>
             <Text style={styles.meta}>
               {item.pole_type.replace('_', ' ')} · Difficulty {item.difficulty}
-              {isAdmin && (item as RemoteSubmission).user_id
+              {admin && (item as RemoteSubmission).user_id
                 ? ` · ${(item as RemoteSubmission).user_id!.slice(0, 8)}…`
                 : ''}
             </Text>
             {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
-            {isAdmin && isPending && (
+            {admin && isPending && (
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={styles.approveBtn}
