@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -21,7 +21,6 @@ export default function RootLayout() {
   const loadVideos = useVideosStore((s) => s.load);
   const initializeAuth = useAuthStore((s) => s.initialize);
   const user = useAuthStore((s) => s.user);
-  const authLoading = useAuthStore((s) => s.loading);
 
   useEffect(() => {
     // Local DB init always runs — offline-first
@@ -49,14 +48,6 @@ export default function RootLayout() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <Text style={{ color: colors.error, fontSize: 14, textAlign: 'center' }}>{error}</Text>
-      </View>
-    );
-  }
-
-  if (authLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }

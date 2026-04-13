@@ -18,7 +18,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  loading: true,
+  loading: false,
 
   initialize() {
     // If Supabase is not configured, skip auth — app works fully locally
