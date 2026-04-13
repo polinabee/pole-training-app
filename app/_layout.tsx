@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -86,7 +86,18 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="trick/[id]" options={{ title: '' }} />
         <Stack.Screen name="session/[id]" options={{ title: 'Session' }} />
-        <Stack.Screen name="suggest-trick" options={{ title: 'Suggest a Trick', presentation: 'modal' }} />
+        <Stack.Screen
+          name="suggest-trick"
+          options={({ navigation }) => ({
+            title: 'Suggest a Trick',
+            presentation: 'modal',
+            headerRight: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+                <Text style={{ color: colors.textMuted, fontSize: 22, lineHeight: 26 }}>×</Text>
+              </TouchableOpacity>
+            ),
+          })}
+        />
       </Stack>
     </>
   );
