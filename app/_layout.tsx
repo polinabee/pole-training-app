@@ -10,8 +10,6 @@ import { useSessionsStore } from '../src/stores/sessionsStore';
 import { useVideosStore } from '../src/stores/videosStore';
 import { colors } from '../src/constants/colors';
 
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +29,14 @@ export default function RootLayout() {
       setError(String(e));
     } finally {
       setReady(true);
-      SplashScreen.hideAsync();
     }
   }, []);
+
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
 
   if (!ready) return null;
 
