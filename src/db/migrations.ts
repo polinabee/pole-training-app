@@ -24,19 +24,23 @@ export function runMigrations(): void {
   try { db.execSync('ALTER TABLE session_tricks ADD COLUMN poleMode TEXT'); } catch {}
   // v3 — fix poleType for static-only momentum spins
   db.runSync(`UPDATE tricks SET poleType = 'static_only' WHERE name IN ('Chair Spin', 'Fireman Spin', 'Back Hook Spin') AND isCustom = 0`);
-  // v3 — add missing tricks if not present
-  const existing = db.getFirstSync<{ count: number }>(`SELECT COUNT(*) as count FROM tricks WHERE name = 'Phoenix' AND isCustom = 0`);
-  if (!existing || existing.count === 0) {
-    db.runSync(
-      `INSERT INTO tricks (id, name, poleType, difficulty, diagramUrl, referenceVideoUrl, tags, hasSides, isCustom, prerequisiteIds) VALUES (?, 'Phoenix', 'static_only', 4, NULL, NULL, '["knee grip","flexibility","splits"]', 1, 0, '[]')`,
-      [Crypto.randomUUID()]
-    );
-  }
-  const existingCKL = db.getFirstSync<{ count: number }>(`SELECT COUNT(*) as count FROM tricks WHERE name = 'Cross Knee Layback' AND isCustom = 0`);
-  if (!existingCKL || existingCKL.count === 0) {
-    db.runSync(
-      `INSERT INTO tricks (id, name, poleType, difficulty, diagramUrl, referenceVideoUrl, tags, hasSides, isCustom, prerequisiteIds) VALUES (?, 'Cross Knee Layback', 'both', 3, NULL, NULL, '["knee grip","flexibility"]', 1, 0, '[]')`,
-      [Crypto.randomUUID()]
-    );
+  // v3 — add missing tricks to existing (already-seeded) DBs only
+  // (fresh installs get these via seedTricks; inserting here would cause seedTricks to skip)
+  const seededCount = db.getFirstSync<{ count: number }>('SELECT COUNT(*) as count FROM tricks WHERE isCustom = 0');
+  if (seededCount && seededCount.count > 0) {
+    const existing = db.getFirstSync<{ count: number }>(`SELECT COUNT(*) as count FROM tricks WHERE name = 'Phoenix' AND isCustom = 0`);
+    if (!existing || existing.count === 0) {
+      db.runSync(
+        `INSERT INTO tricks (id, name, poleType, difficulty, diagramUrl, referenceVideoUrl, tags, hasSides, isCustom, prerequisiteIds) VALUES (?, 'Phoenix', 'static_only', 4, NULL, NULL, '["knee grip","flexibility","splits"]', 1, 0, '[]')`,
+        [Crypto.randomUUID()]
+      );
+    }
+    const existingCKL = db.getFirstSync<{ count: number }>(`SELECT COUNT(*) as count FROM tricks WHERE name = 'Cross Knee Layback' AND isCustom = 0`);
+    if (!existingCKL || existingCKL.count === 0) {
+      db.runSync(
+        `INSERT INTO tricks (id, name, poleType, difficulty, diagramUrl, referenceVideoUrl, tags, hasSides, isCustom, prerequisiteIds) VALUES (?, 'Cross Knee Layback', 'both', 3, NULL, NULL, '["knee grip","flexibility"]', 1, 0, '[]')`,
+        [Crypto.randomUUID()]
+      );
+    }
   }
 }
