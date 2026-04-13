@@ -121,6 +121,15 @@ export default function LibraryScreen() {
         >
           <Text style={styles.suggestLink}>+ Suggest a trick</Text>
         </TouchableOpacity>
+        <View style={styles.suggestRowRight}>
+          <TouchableOpacity onPress={() => router.push('/submissions')} activeOpacity={0.7}>
+            <Text style={styles.metaLink}>My submissions</Text>
+          </TouchableOpacity>
+          <Text style={styles.metaDot}>·</Text>
+          <TouchableOpacity onPress={() => router.push('/settings')} activeOpacity={0.7}>
+            <Text style={styles.metaLink}>Settings</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FilterBar
@@ -296,12 +305,27 @@ const styles = StyleSheet.create({
   suggestRow: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   suggestLink: {
     color: colors.accentDim,
     fontSize: 13,
     fontWeight: '600',
+  },
+  suggestRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaLink: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  metaDot: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   list: {
     padding: 16,

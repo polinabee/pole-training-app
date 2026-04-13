@@ -98,6 +98,30 @@ export default function RootLayout() {
             ),
           })}
         />
+        <Stack.Screen
+          name="submissions"
+          options={({ navigation }) => ({
+            title: 'Submissions',
+            presentation: 'modal',
+            headerRight: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+                <Text style={{ color: colors.textMuted, fontSize: 22, lineHeight: 26 }}>×</Text>
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="settings"
+          options={({ navigation }) => ({
+            title: 'Settings',
+            presentation: 'modal',
+            headerRight: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+                <Text style={{ color: colors.textMuted, fontSize: 22, lineHeight: 26 }}>×</Text>
+              </TouchableOpacity>
+            ),
+          })}
+        />
       </Stack>
     </>
   );
