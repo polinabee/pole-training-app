@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../src/constants/colors';
 import { PREDEFINED_TAGS } from '../src/constants/tags';
 import { useAuthStore } from '../src/stores/authStore';
-import { supabase } from '../src/lib/supabase';
+import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 import { getDb } from '../src/db';
 import * as Crypto from 'expo-crypto';
 import type { PoleType } from '../src/types';
@@ -40,6 +40,7 @@ async function isOnline(): Promise<boolean> {
 }
 
 async function flushPendingSubmissions(userId: string | null): Promise<void> {
+  if (!supabase) return;
   const db = getDb();
   const pending = db.getAllSync<{
     id: string;
@@ -52,7 +53,7 @@ async function flushPendingSubmissions(userId: string | null): Promise<void> {
   }>('SELECT * FROM pending_submissions');
 
   for (const row of pending) {
-    const { error } = await supabase!.from('trick_submissions').insert({
+    const { error } = await supabase.from('trick_submissions').insert({
       user_id: userId ?? null,
       name: row.name,
       pole_type: row.pole_type,
@@ -102,11 +103,11 @@ export default function SuggestTrickScreen() {
     try {
       const online = await isOnline();
 
-      if (online) {
+      if (online && isSupabaseConfigured && supabase) {
         // Flush any queued offline submissions first
         await flushPendingSubmissions(user?.id ?? null);
 
-        const { error } = await supabase!.from('trick_submissions').insert({
+        const { error } = await supabase.from('trick_submissions').insert({
           user_id: user?.id ?? null,
           name: name.trim(),
           pole_type: poleType,
