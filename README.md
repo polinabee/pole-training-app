@@ -76,5 +76,6 @@ GNU General Public License v3.0 — see [LICENSE](LICENSE). Free to use, forks m
 
 ## Roadmap
 
+- **V1** - Tricks database and training session planner
 - **V2** — Spaced repetition (SM-2), combo builder, gamification
 - **V3** — Choreography planner, social features, Supabase backend
