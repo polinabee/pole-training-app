@@ -1,6 +1,7 @@
 # Pole Training App
 
 A personal iOS pole dancing training tracker. Log tricks, track progress per side, attach videos, and see what to practice next.
+I am building this for learning and for fun, contributions and ideas are welcome.
 
 ## Features
 
