@@ -12,28 +12,44 @@ import { colors } from '../src/constants/colors';
 import { useAuthStore } from '../src/stores/authStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 
+type Mode = 'sign_in' | 'sign_up';
+
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const [mode, setMode] = useState<Mode>('sign_in');
   const [email, setEmail] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  async function handleMagicLink() {
-    if (!email.trim() || !supabase) return;
-    setSending(true);
+  async function handleSubmit() {
+    if (!email.trim() || !password || !supabase) return;
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: true },
-      });
-      if (error) throw error;
-      setSent(true);
+      if (mode === 'sign_in') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+        if (error) throw error;
+        // Supabase may require email confirmation depending on project settings.
+        // If confirmations are disabled, user is signed in immediately.
+        Alert.alert(
+          'Account created',
+          'You are now signed in.',
+        );
+      }
     } catch (err: unknown) {
-      Alert.alert('Error', (err as Error).message ?? 'Could not send sign-in link.');
+      Alert.alert('Error', (err as Error).message ?? 'Sign-in failed.');
     } finally {
-      setSending(false);
+      setLoading(false);
     }
   }
 
@@ -51,6 +67,8 @@ export default function SettingsScreen() {
       },
     ]);
   }
+
+  const isValid = email.trim().length > 0 && password.length >= 6;
 
   return (
     <View style={styles.container}>
@@ -81,22 +99,34 @@ export default function SettingsScreen() {
             }
           </TouchableOpacity>
         </View>
-      ) : sent ? (
-        <View style={styles.card}>
-          <Text style={styles.cardText}>Check your email</Text>
-          <Text style={styles.cardSubtext}>
-            We sent a sign-in link to {email}. Tap it to sign in — no password needed.
-          </Text>
-          <TouchableOpacity onPress={() => { setSent(false); setEmail(''); }} activeOpacity={0.7}>
-            <Text style={styles.resetLink}>Use a different email</Text>
-          </TouchableOpacity>
-        </View>
       ) : (
         <View style={styles.card}>
           <Text style={styles.cardSubtext}>
             Optional — sign in to link your trick suggestions to your account.
             Your training data always stays on this device.
           </Text>
+
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'sign_in' && styles.modeBtnActive]}
+              onPress={() => setMode('sign_in')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modeBtnText, mode === 'sign_in' && styles.modeBtnTextActive]}>
+                Sign in
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'sign_up' && styles.modeBtnActive]}
+              onPress={() => setMode('sign_up')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modeBtnText, mode === 'sign_up' && styles.modeBtnTextActive]}>
+                Create account
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TextInput
             style={styles.input}
             placeholder="your@email.com"
@@ -107,15 +137,27 @@ export default function SettingsScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+          <TextInput
+            style={styles.input}
+            placeholder="Password (min 6 characters)"
+            placeholderTextColor={colors.textDim}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
           <TouchableOpacity
-            style={[styles.sendBtn, (!email.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={handleMagicLink}
-            disabled={!email.trim() || sending}
+            style={[styles.submitBtn, (!isValid || loading) && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={!isValid || loading}
             activeOpacity={0.8}
           >
-            {sending
+            {loading
               ? <ActivityIndicator color={colors.bg} />
-              : <Text style={styles.sendBtnText}>Send sign-in link</Text>
+              : <Text style={styles.submitBtnText}>
+                  {mode === 'sign_in' ? 'Sign in' : 'Create account'}
+                </Text>
             }
           </TouchableOpacity>
         </View>
@@ -168,6 +210,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 8,
+    padding: 3,
+    gap: 3,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  modeBtnActive: {
+    backgroundColor: colors.accent,
+  },
+  modeBtnText: {
+    color: colors.textMuted,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  modeBtnTextActive: {
+    color: colors.bg,
+  },
   input: {
     backgroundColor: colors.surfaceHigh,
     color: colors.text,
@@ -177,16 +243,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  sendBtn: {
+  submitBtn: {
     backgroundColor: colors.accent,
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
   },
-  sendBtnDisabled: {
+  submitBtnDisabled: {
     opacity: 0.4,
   },
-  sendBtnText: {
+  submitBtnText: {
     color: colors.bg,
     fontWeight: '700',
     fontSize: 15,
@@ -202,10 +268,5 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontWeight: '600',
     fontSize: 15,
-  },
-  resetLink: {
-    color: colors.accentDim,
-    fontSize: 13,
-    textAlign: 'center',
   },
 });

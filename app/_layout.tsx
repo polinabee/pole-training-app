@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -9,7 +9,6 @@ import { useTricksStore } from '../src/stores/tricksStore';
 import { useSessionsStore } from '../src/stores/sessionsStore';
 import { useVideosStore } from '../src/stores/videosStore';
 import { useAuthStore } from '../src/stores/authStore';
-import { supabase } from '../src/lib/supabase';
 import { colors } from '../src/constants/colors';
 
 export default function RootLayout() {
@@ -42,18 +41,6 @@ export default function RootLayout() {
     initializeAuth();
     loadCommunityTricks();
 
-    // Handle magic link deep link when app is already open
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      if (supabase && url.includes('access_token')) {
-        const params = new URLSearchParams(url.split('#')[1] ?? url.split('?')[1] ?? '');
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token) {
-          supabase.auth.setSession({ access_token, refresh_token: refresh_token ?? '' }).catch(() => {});
-        }
-      }
-    });
-    return () => sub.remove();
   }, []);
 
   if (error) {
