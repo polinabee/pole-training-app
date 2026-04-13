@@ -3,51 +3,42 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TextInput,
   StyleSheet,
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { colors } from '../src/constants/colors';
 import { useAuthStore } from '../src/stores/authStore';
-import { isSupabaseConfigured } from '../src/lib/supabase';
+import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
-  const signInWithApple = useAuthStore((s) => s.signInWithApple);
-  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const signOut = useAuthStore((s) => s.signOut);
-  const [appleLoading, setAppleLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  async function handleAppleSignIn() {
-    setAppleLoading(true);
+  async function handleMagicLink() {
+    if (!email.trim() || !supabase) return;
+    setSending(true);
     try {
-      await signInWithApple();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: true },
+      });
+      if (error) throw error;
+      setSent(true);
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign in failed', 'Could not sign in with Apple. Please try again.');
-      }
+      Alert.alert('Error', (err as Error).message ?? 'Could not send sign-in link.');
     } finally {
-      setAppleLoading(false);
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    setGoogleLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch {
-      Alert.alert('Sign in failed', 'Could not sign in with Google. Please try again.');
-    } finally {
-      setGoogleLoading(false);
+      setSending(false);
     }
   }
 
   async function handleSignOut() {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+    Alert.alert('Sign out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign out',
@@ -67,15 +58,16 @@ export default function SettingsScreen() {
 
       {!isSupabaseConfigured ? (
         <View style={styles.card}>
-          <Text style={styles.cardText}>
-            Sign-in is not available — Supabase is not configured.
+          <Text style={styles.cardText}>Using app locally</Text>
+          <Text style={styles.cardSubtext}>
+            Your training data is stored on this device. Sign-in is not available in this build.
           </Text>
         </View>
       ) : user ? (
         <View style={styles.card}>
           <Text style={styles.email}>{user.email ?? 'Signed in'}</Text>
           <Text style={styles.cardSubtext}>
-            Signed in · your submissions are linked to your account
+            Signed in · submissions are linked to your account
           </Text>
           <TouchableOpacity
             style={styles.signOutBtn}
@@ -83,41 +75,49 @@ export default function SettingsScreen() {
             disabled={signingOut}
             activeOpacity={0.8}
           >
-            {signingOut ? (
-              <ActivityIndicator color={colors.error} />
-            ) : (
-              <Text style={styles.signOutBtnText}>Sign out</Text>
-            )}
+            {signingOut
+              ? <ActivityIndicator color={colors.error} />
+              : <Text style={styles.signOutBtnText}>Sign out</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      ) : sent ? (
+        <View style={styles.card}>
+          <Text style={styles.cardText}>Check your email</Text>
+          <Text style={styles.cardSubtext}>
+            We sent a sign-in link to {email}. Tap it to sign in — no password needed.
+          </Text>
+          <TouchableOpacity onPress={() => { setSent(false); setEmail(''); }} activeOpacity={0.7}>
+            <Text style={styles.resetLink}>Use a different email</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.card}>
           <Text style={styles.cardSubtext}>
-            Sign in to link your trick suggestions to your account.
-            Your training data always stays on your device.
+            Optional — sign in to link your trick suggestions to your account.
+            Your training data always stays on this device.
           </Text>
-          <View style={styles.signInButtons}>
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={10}
-              style={styles.appleButton}
-              onPress={handleAppleSignIn}
-            />
-            {appleLoading && <ActivityIndicator color={colors.accent} />}
-            <TouchableOpacity
-              style={styles.googleButton}
-              onPress={handleGoogleSignIn}
-              disabled={googleLoading}
-              activeOpacity={0.8}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color={colors.bg} />
-              ) : (
-                <Text style={styles.googleButtonText}>Sign in with Google</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="your@email.com"
+            placeholderTextColor={colors.textDim}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity
+            style={[styles.sendBtn, (!email.trim() || sending) && styles.sendBtnDisabled]}
+            onPress={handleMagicLink}
+            disabled={!email.trim() || sending}
+            activeOpacity={0.8}
+          >
+            {sending
+              ? <ActivityIndicator color={colors.bg} />
+              : <Text style={styles.sendBtnText}>Send sign-in link</Text>
+            }
+          </TouchableOpacity>
         </View>
       )}
 
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 10,
+    gap: 12,
   },
   email: {
     color: colors.text,
@@ -161,33 +161,35 @@ const styles = StyleSheet.create({
   cardText: {
     color: colors.text,
     fontSize: 15,
+    fontWeight: '600',
   },
   cardSubtext: {
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
   },
-  signInButtons: {
-    gap: 10,
-  },
-  appleButton: {
-    width: '100%',
-    height: 48,
-  },
-  googleButton: {
-    width: '100%',
-    height: 48,
+  input: {
     backgroundColor: colors.surfaceHigh,
+    color: colors.text,
     borderRadius: 10,
+    padding: 13,
+    fontSize: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  googleButtonText: {
-    color: colors.text,
+  sendBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  sendBtnDisabled: {
+    opacity: 0.4,
+  },
+  sendBtnText: {
+    color: colors.bg,
+    fontWeight: '700',
     fontSize: 15,
-    fontWeight: '600',
   },
   signOutBtn: {
     borderWidth: 1,
@@ -200,5 +202,10 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontWeight: '600',
     fontSize: 15,
+  },
+  resetLink: {
+    color: colors.accentDim,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });
