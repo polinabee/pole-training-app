@@ -33,6 +33,11 @@ export function TrickCard({ trick, userTrick, onPress, subtitle }: Props) {
         <Text style={styles.name} numberOfLines={1}>
           {trick.name}
         </Text>
+        {trick.source === 'community' && (
+          <View style={styles.communityBadge}>
+            <Text style={styles.communityBadgeText}>Community</Text>
+          </View>
+        )}
         <View style={[styles.poleBadge, { borderColor: POLE_COLOR[trick.poleType] }]}>
           <Text style={[styles.poleBadgeText, { color: POLE_COLOR[trick.poleType] }]}>
             {POLE_LABEL[trick.poleType]}
@@ -139,5 +144,18 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     marginLeft: 'auto',
+  },
+  communityBadge: {
+    backgroundColor: colors.accentDim,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  communityBadgeText: {
+    color: colors.bg,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

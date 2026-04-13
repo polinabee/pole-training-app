@@ -16,6 +16,7 @@ import AuthScreen from './auth';
 export default function RootLayout() {
   const [error, setError] = useState<string | null>(null);
   const loadTricks = useTricksStore((s) => s.load);
+  const loadCommunityTricks = useTricksStore((s) => s.loadCommunityTricks);
   const loadSessions = useSessionsStore((s) => s.load);
   const loadVideos = useVideosStore((s) => s.load);
   const initializeAuth = useAuthStore((s) => s.initialize);
@@ -39,8 +40,9 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
 
-    // Auth init runs in parallel — gracefully handles offline state
+    // Auth + community tricks run in parallel — both gracefully handle offline
     initializeAuth();
+    loadCommunityTricks();
   }, []);
 
   if (error) {

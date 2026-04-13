@@ -28,6 +28,7 @@ export interface Trick {
   hasSides: boolean;
   isCustom: boolean;
   prerequisiteIds: string[];
+  source?: 'community'; // present only on crowd-sourced approved tricks
 }
 
 export interface UserTrick {

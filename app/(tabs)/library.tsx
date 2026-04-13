@@ -21,6 +21,7 @@ import type { PoleType, TrickStatus } from '../../src/types';
 export default function LibraryScreen() {
   const router = useRouter();
   const tricks = useTricksStore((s) => s.tricks);
+  const communityTricks = useTricksStore((s) => s.communityTricks);
   const userTricks = useTricksStore((s) => s.userTricks);
   const addCustomTrick = useTricksStore((s) => s.addCustomTrick);
 
@@ -51,8 +52,13 @@ export default function LibraryScreen() {
     return Array.from(all).sort();
   }, [tricks]);
 
+  const allTricks = useMemo(
+    () => [...tricks, ...communityTricks],
+    [tricks, communityTricks]
+  );
+
   const filtered = useMemo(() => {
-    return tricks.filter((t) => {
+    return allTricks.filter((t) => {
       if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (selectedPoleTypes.length > 0 && !selectedPoleTypes.includes(t.poleType)) return false;
       if (selectedDifficulties.length > 0 && !selectedDifficulties.includes(t.difficulty)) return false;
@@ -70,7 +76,7 @@ export default function LibraryScreen() {
       }
       return true;
     });
-  }, [tricks, userTricks, search, selectedPoleTypes, selectedDifficulties, selectedTags, selectedStatuses]);
+  }, [allTricks, userTricks, search, selectedPoleTypes, selectedDifficulties, selectedTags, selectedStatuses]);
 
   function handleAddTrick() {
     if (!newName.trim()) return;
