@@ -14,7 +14,6 @@ import { colors } from '../src/constants/colors';
 import AuthScreen from './auth';
 
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadTricks = useTricksStore((s) => s.load);
   const loadSessions = useSessionsStore((s) => s.load);
@@ -35,20 +34,14 @@ export default function RootLayout() {
       console.error('DB init error:', e);
       setError(String(e));
     } finally {
-      setReady(true);
+      // Belt-and-suspenders: hide splash manually in addition to Expo Router's
+      // automatic hide (which fires when navigation state first changes).
+      SplashScreen.hideAsync().catch(() => {});
     }
 
     // Auth init runs in parallel — gracefully handles offline state
     initializeAuth();
   }, []);
-
-  useEffect(() => {
-    if (ready) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [ready]);
-
-  if (!ready) return null;
 
   if (error) {
     return (
