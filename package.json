@@ -18,14 +18,24 @@
       "^expo-crypto$": "<rootDir>/__mocks__/expo-crypto.js"
     },
     "transform": {
-      "^.+\\.tsx?$": ["ts-jest", { "tsconfig": { "strict": false } }]
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "strict": false
+          }
+        }
+      ]
     }
   },
   "dependencies": {
     "@react-navigation/elements": "^2.9.14",
     "@react-navigation/native": "^7.0.14",
+    "@supabase/supabase-js": "^2.103.0",
     "expo": "~52.0.46",
+    "expo-apple-authentication": "^55.0.13",
     "expo-asset": "~11.0.5",
+    "expo-auth-session": "^55.0.13",
     "expo-av": "~15.0.2",
     "expo-crypto": "~14.0.2",
     "expo-font": "~13.0.4",
@@ -34,9 +44,11 @@
     "expo-media-library": "~17.0.6",
     "expo-modules-core": "~2.2.3",
     "expo-router": "~4.0.20",
+    "expo-secure-store": "^55.0.13",
     "expo-splash-screen": "~0.29.24",
     "expo-sqlite": "~15.1.4",
     "expo-status-bar": "~2.0.1",
+    "expo-web-browser": "^55.0.14",
     "react": "18.3.1",
     "react-native": "0.76.9",
     "react-native-gesture-handler": "~2.20.2",

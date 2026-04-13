@@ -69,3 +69,25 @@ export interface Video {
   notes: string | null;
   createdAt: string; // ISO datetime
 }
+
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TrickSubmission {
+  name: string;
+  poleType: PoleType;
+  difficulty: number;
+  hasSides: boolean;
+  tags: string[];
+  notes: string;
+}
+
+export interface PendingSubmission {
+  id: string;
+  name: string;
+  pole_type: PoleType;
+  difficulty: number;
+  has_sides: boolean;
+  tags: string[];
+  notes: string | null;
+  created_at: string;
+}

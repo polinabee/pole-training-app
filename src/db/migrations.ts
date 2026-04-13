@@ -6,6 +6,7 @@ import {
   CREATE_TRAINING_SESSIONS_TABLE,
   CREATE_SESSION_TRICKS_TABLE,
   CREATE_VIDEOS_TABLE,
+  CREATE_PENDING_SUBMISSIONS_TABLE,
 } from './schema';
 
 export function runMigrations(): void {
@@ -15,6 +16,8 @@ export function runMigrations(): void {
   db.execSync(CREATE_TRAINING_SESSIONS_TABLE);
   db.execSync(CREATE_SESSION_TRICKS_TABLE);
   db.execSync(CREATE_VIDEOS_TABLE);
+  // v4 — offline queue for trick submissions
+  db.execSync(CREATE_PENDING_SUBMISSIONS_TABLE);
 
   // v2 — add title to sessions, reps + completed_reps to session_tricks
   try { db.execSync('ALTER TABLE training_sessions ADD COLUMN title TEXT'); } catch {}

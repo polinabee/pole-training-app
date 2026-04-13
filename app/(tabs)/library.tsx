@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   Pressable,
+  TouchableOpacity,
   Text,
   Modal,
 } from 'react-native';
@@ -105,6 +106,15 @@ export default function LibraryScreen() {
         <Pressable style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
           <Text style={styles.addBtnText}>+ Add</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.suggestRow}>
+        <TouchableOpacity
+          onPress={() => router.push('/suggest-trick')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.suggestLink}>+ Suggest a trick</Text>
+        </TouchableOpacity>
       </View>
 
       <FilterBar
@@ -276,6 +286,16 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontWeight: '700',
     fontSize: 14,
+  },
+  suggestRow: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    alignItems: 'flex-end',
+  },
+  suggestLink: {
+    color: colors.accentDim,
+    fontSize: 13,
+    fontWeight: '600',
   },
   list: {
     padding: 16,

@@ -163,6 +163,28 @@ export default function TrickDetailScreen() {
         </Section>
       )}
 
+      {/* Suggest edit — only for built-in (non-custom) tricks */}
+      {!trick.isCustom ? (
+        <TouchableOpacity
+          style={styles.suggestEditBtn}
+          activeOpacity={0.7}
+          onPress={() =>
+            router.push({
+              pathname: '/suggest-trick',
+              params: {
+                prefillName: trick.name,
+                prefillPoleType: trick.poleType,
+                prefillDifficulty: String(trick.difficulty),
+                prefillHasSides: String(trick.hasSides),
+                prefillTags: JSON.stringify(trick.tags),
+              },
+            })
+          }
+        >
+          <Text style={styles.suggestEditBtnText}>Suggest edit</Text>
+        </TouchableOpacity>
+      ) : null}
+
       <View style={styles.divider} />
 
       {/* Delete (custom tricks only) */}
@@ -302,6 +324,19 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     color: colors.error,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  suggestEditBtn: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  suggestEditBtnText: {
+    color: colors.textMuted,
     fontWeight: '600',
     fontSize: 14,
   },
