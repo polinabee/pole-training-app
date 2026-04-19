@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+// Only update store when user identity actually changes (not on every token refresh)
+function userChanged(prev: User | null, next: User | null): boolean {
+  return prev?.id !== next?.id;
+}
+
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -23,14 +28,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     // Restore session from SecureStore (works offline)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      set({ user: session?.user ?? null });
+      set((s) => userChanged(s.user, session?.user ?? null) ? { user: session?.user ?? null } : s);
     }).catch(() => {
       set({ user: null });
     });
 
-    // Keep session in sync (handles magic link deep link callback)
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ user: session?.user ?? null });
+    // Only update on sign-in/sign-out events, not token refreshes
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        set((s) => userChanged(s.user, session?.user ?? null) ? { user: session?.user ?? null } : s);
+      }
     });
   },
 
