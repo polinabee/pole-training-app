@@ -46,7 +46,8 @@ export default function SuggestTrickScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<SuggestTrickParams>();
   const user = useAuthStore((s) => s.user);
-  const allTricks = useTricksStore((s) => [...s.tricks, ...s.communityTricks]);
+  const tricks = useTricksStore((s) => s.tricks);
+  const communityTricks = useTricksStore((s) => s.communityTricks);
 
   const [name, setName] = useState(params.prefillName ?? '');
   const [poleType, setPoleType] = useState<PoleType>(
@@ -75,7 +76,7 @@ export default function SuggestTrickScreen() {
     }
 
     // Check against local trick library (seeded + community)
-    if (isDuplicateInLibrary(name, allTricks)) {
+    if (isDuplicateInLibrary(name, [...tricks, ...communityTricks])) {
       Alert.alert('Already exists', `"${name.trim()}" is already in the trick library.`);
       return;
     }
