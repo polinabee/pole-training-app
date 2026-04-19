@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useTricksStore } from '../../src/stores/tricksStore';
+import { useAuthStore } from '../../src/stores/authStore';
 import { SideStatusPicker } from '../../src/components/SideStatusPicker';
 import { DifficultyDots } from '../../src/components/DifficultyDots';
 import { colors } from '../../src/constants/colors';
@@ -32,7 +33,9 @@ export default function TrickDetailScreen() {
   const userTricks = useTricksStore((s) => s.userTricks);
   const upsertUserTrick = useTricksStore((s) => s.upsertUserTrick);
   const deleteCustomTrick = useTricksStore((s) => s.deleteCustomTrick);
+  const adminDeleteTrick = useTricksStore((s) => s.adminDeleteTrick);
   const updateTrickTags = useTricksStore((s) => s.updateTrickTags);
+  const isAdmin = useAuthStore((s) => s.user?.app_metadata?.is_admin === true);
 
   const trick = tricks.find((t) => t.id === id) ?? communityTricks.find((t) => t.id === id);
   const isCommunity = trick?.source === 'community';
@@ -193,8 +196,8 @@ export default function TrickDetailScreen() {
 
       <View style={styles.divider} />
 
-      {/* Delete (custom tricks only) */}
-      {trick.isCustom ? (
+      {/* Delete */}
+      {(trick.isCustom || isAdmin) ? (
         <>
           <View style={styles.divider} />
           <Pressable
@@ -205,7 +208,14 @@ export default function TrickDetailScreen() {
                 {
                   text: 'Delete',
                   style: 'destructive',
-                  onPress: () => { deleteCustomTrick(trick.id); router.back(); },
+                  onPress: () => {
+                    if (isAdmin) {
+                      adminDeleteTrick(trick.id).then(() => router.back());
+                    } else {
+                      deleteCustomTrick(trick.id);
+                      router.back();
+                    }
+                  },
                 },
               ])
             }
