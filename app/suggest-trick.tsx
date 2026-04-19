@@ -13,8 +13,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../src/constants/colors';
 import { PREDEFINED_TAGS } from '../src/constants/tags';
 import { useAuthStore } from '../src/stores/authStore';
+import { useTricksStore } from '../src/stores/tricksStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 import { flushPendingSubmissions } from '../src/lib/flushSubmissions';
+import { isDuplicateInLibrary } from '../src/lib/submissionsHelpers';
 import { getDb } from '../src/db';
 import * as Crypto from 'expo-crypto';
 import type { PoleType } from '../src/types';
@@ -44,6 +46,7 @@ export default function SuggestTrickScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<SuggestTrickParams>();
   const user = useAuthStore((s) => s.user);
+  const allTricks = useTricksStore((s) => [...s.tricks, ...s.communityTricks]);
 
   const [name, setName] = useState(params.prefillName ?? '');
   const [poleType, setPoleType] = useState<PoleType>(
@@ -69,6 +72,26 @@ export default function SuggestTrickScreen() {
     if (!name.trim()) {
       Alert.alert('Missing name', 'Please enter a trick name.');
       return;
+    }
+
+    // Check against local trick library (seeded + community)
+    if (isDuplicateInLibrary(name, allTricks)) {
+      Alert.alert('Already exists', `"${name.trim()}" is already in the trick library.`);
+      return;
+    }
+
+    // Check against pending/approved submissions in Supabase
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from('trick_submissions')
+        .select('id')
+        .ilike('name', name.trim())
+        .in('status', ['pending', 'approved'])
+        .limit(1);
+      if (data && data.length > 0) {
+        Alert.alert('Already submitted', `"${name.trim()}" has already been submitted or approved.`);
+        return;
+      }
     }
 
     setSubmitting(true);

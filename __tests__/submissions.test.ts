@@ -1,4 +1,4 @@
-import { buildSections, getIsAdmin, isVisibleToUser } from '../src/lib/submissionsHelpers';
+import { buildSections, getIsAdmin, isVisibleToUser, isDuplicateInLibrary } from '../src/lib/submissionsHelpers';
 import type { RemoteSubmission, LocalSubmission } from '../src/lib/submissionsHelpers';
 
 beforeEach(() => {
@@ -32,6 +32,33 @@ function local(overrides: Partial<LocalSubmission> = {}): LocalSubmission {
     ...overrides,
   };
 }
+
+// ─── isDuplicateInLibrary ─────────────────────────────────────────────────────
+
+describe('isDuplicateInLibrary', () => {
+  const library = [{ name: 'Fireman Spin' }, { name: 'Gemini' }, { name: 'Chair Spin' }];
+
+  it('returns true for exact match', () => {
+    expect(isDuplicateInLibrary('Fireman Spin', library)).toBe(true);
+  });
+
+  it('is case-insensitive', () => {
+    expect(isDuplicateInLibrary('fireman spin', library)).toBe(true);
+    expect(isDuplicateInLibrary('GEMINI', library)).toBe(true);
+  });
+
+  it('ignores leading/trailing whitespace', () => {
+    expect(isDuplicateInLibrary('  Chair Spin  ', library)).toBe(true);
+  });
+
+  it('returns false for a new trick name', () => {
+    expect(isDuplicateInLibrary('Twisted Jasmine', library)).toBe(false);
+  });
+
+  it('returns false for empty library', () => {
+    expect(isDuplicateInLibrary('Fireman Spin', [])).toBe(false);
+  });
+});
 
 // ─── getIsAdmin ───────────────────────────────────────────────────────────────
 

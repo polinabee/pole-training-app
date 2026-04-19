@@ -63,6 +63,15 @@ export function buildSections(
   return sections;
 }
 
+/** Returns true if a trick name already exists in the local library (case-insensitive). */
+export function isDuplicateInLibrary(
+  name: string,
+  tricks: Array<{ name: string }>,
+): boolean {
+  const normalized = name.trim().toLowerCase();
+  return tricks.some((t) => t.name.toLowerCase() === normalized);
+}
+
 /** Returns true if a remote submission row should be visible to the given userId.
  *  Mirrors the Supabase RLS SELECT policy:
  *    - admins see everything
