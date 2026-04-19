@@ -75,23 +75,23 @@ export default function SuggestTrickScreen() {
       return;
     }
 
-    // Check against local trick library (seeded + community)
-    if (isDuplicateInLibrary(name, [...tricks, ...communityTricks])) {
-      Alert.alert('Already exists', `"${name.trim()}" is already in the trick library.`);
-      return;
-    }
-
-    // Check against pending/approved submissions in Supabase
-    if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase
-        .from('trick_submissions')
-        .select('id')
-        .ilike('name', name.trim())
-        .in('status', ['pending', 'approved'])
-        .limit(1);
-      if (data && data.length > 0) {
-        Alert.alert('Already submitted', `"${name.trim()}" has already been submitted or approved.`);
+    // Duplicate checks only apply to new trick suggestions, not edit suggestions
+    if (!isEdit) {
+      if (isDuplicateInLibrary(name, [...tricks, ...communityTricks])) {
+        Alert.alert('Already exists', `"${name.trim()}" is already in the trick library.`);
         return;
+      }
+      if (isSupabaseConfigured && supabase) {
+        const { data } = await supabase
+          .from('trick_submissions')
+          .select('id')
+          .ilike('name', name.trim())
+          .in('status', ['pending', 'approved'])
+          .limit(1);
+        if (data && data.length > 0) {
+          Alert.alert('Already submitted', `"${name.trim()}" has already been submitted or approved.`);
+          return;
+        }
       }
     }
 

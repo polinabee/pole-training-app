@@ -59,6 +59,12 @@ describe('isDuplicateInLibrary', () => {
   it('returns false for empty library', () => {
     expect(isDuplicateInLibrary('Fireman Spin', [])).toBe(false);
   });
+
+  it('still returns true for a name that exists (caller decides whether to block)', () => {
+    // The isEdit flag is checked by the caller before calling this — the helper
+    // itself always reports duplicates truthfully
+    expect(isDuplicateInLibrary('Fireman Spin', library)).toBe(true);
+  });
 });
 
 // ─── getIsAdmin ───────────────────────────────────────────────────────────────
