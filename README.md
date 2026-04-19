@@ -148,7 +148,8 @@ GNU General Public License v3.0 — see [LICENSE](LICENSE). Free to use, forks m
 
 ## Roadmap
 
-- **V1** — Tricks database and training session planner
-- **V2** — Community trick library with admin approval (done)
-- **V3** — Spaced repetition (SM-2), combo builder, gamification
-- **V4** — Choreography planner, social features
+- **V1** — Tricks database and training session planner ✓
+- **V2** — Community trick library with admin approval ✓
+- **V3** — App icon, user video submissions (with optional IG link), pro poler reference video partnerships
+- **V4** — Spaced repetition (SM-2), combo builder, gamification
+- **V5** — Choreography planner, social features
