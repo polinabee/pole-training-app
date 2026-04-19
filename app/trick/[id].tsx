@@ -28,12 +28,14 @@ export default function TrickDetailScreen() {
 
   const router = useRouter();
   const tricks = useTricksStore((s) => s.tricks);
+  const communityTricks = useTricksStore((s) => s.communityTricks);
   const userTricks = useTricksStore((s) => s.userTricks);
   const upsertUserTrick = useTricksStore((s) => s.upsertUserTrick);
   const deleteCustomTrick = useTricksStore((s) => s.deleteCustomTrick);
   const updateTrickTags = useTricksStore((s) => s.updateTrickTags);
 
-  const trick = tricks.find((t) => t.id === id);
+  const trick = tricks.find((t) => t.id === id) ?? communityTricks.find((t) => t.id === id);
+  const isCommunity = trick?.source === 'community';
   const userTrick = userTricks.find((ut) => ut.trickId === id);
 
   const [notesLeft, setNotesLeft] = useState(userTrick?.notes_left ?? '');
@@ -83,30 +85,34 @@ export default function TrickDetailScreen() {
             <Text style={[styles.tagText, styles.customTagText]}>custom</Text>
           </View>
         ) : null}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.addTagBtn}
-          onPress={() => tagInputRef.current?.focus()}
-        >
-          <Text style={styles.addTagBtnText}>+ tag</Text>
-        </TouchableOpacity>
+        {!isCommunity && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.addTagBtn}
+            onPress={() => tagInputRef.current?.focus()}
+          >
+            <Text style={styles.addTagBtnText}>+ tag</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <TextInput
-        ref={tagInputRef}
-        style={styles.tagInput}
-        placeholder="New tag..."
-        placeholderTextColor={colors.textDim}
-        value={tagInput}
-        onChangeText={setTagInput}
-        returnKeyType="done"
-        onSubmitEditing={() => {
-          const tag = tagInput.trim().toLowerCase();
-          if (tag && !trick.tags.includes(tag)) {
-            updateTrickTags(trick.id, [...trick.tags, tag]);
-          }
-          setTagInput('');
-        }}
-      />
+      {!isCommunity && (
+        <TextInput
+          ref={tagInputRef}
+          style={styles.tagInput}
+          placeholder="New tag..."
+          placeholderTextColor={colors.textDim}
+          value={tagInput}
+          onChangeText={setTagInput}
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            const tag = tagInput.trim().toLowerCase();
+            if (tag && !trick.tags.includes(tag)) {
+              updateTrickTags(trick.id, [...trick.tags, tag]);
+            }
+            setTagInput('');
+          }}
+        />
+      )}
 
       <View style={styles.divider} />
 
