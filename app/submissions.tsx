@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { colors } from '../src/constants/colors';
 import { useAuthStore } from '../src/stores/authStore';
+import { useTricksStore } from '../src/stores/tricksStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 import { flushPendingSubmissions } from '../src/lib/flushSubmissions';
 import {
@@ -70,6 +71,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default function SubmissionsScreen() {
   const user = useAuthStore((s) => s.user);
   const admin = getIsAdmin(user);
+  const loadCommunityTricks = useTricksStore((s) => s.loadCommunityTricks);
 
   const [remote, setRemote] = useState<RemoteSubmission[]>([]);
   const [local, setLocal] = useState<LocalSubmission[]>([]);
@@ -126,6 +128,8 @@ export default function SubmissionsScreen() {
       return r;
     }));
     setActingOn(null);
+    // Refresh library so the newly approved trick appears immediately
+    loadCommunityTricks();
   }
 
   async function handleRejectGroup(group: SubmissionGroup) {
