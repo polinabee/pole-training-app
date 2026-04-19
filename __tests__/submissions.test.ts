@@ -12,6 +12,7 @@ const base: Omit<RemoteSubmission, 'status' | 'user_id'> = {
   name: 'Fireman Spin',
   pole_type: 'both',
   difficulty: 2,
+  has_sides: true,
   notes: null,
   created_at: '2025-01-01T00:00:00Z',
 };

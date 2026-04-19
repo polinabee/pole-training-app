@@ -5,6 +5,7 @@ export type RemoteSubmission = {
   name: string;
   pole_type: string;
   difficulty: number;
+  has_sides: boolean;
   notes: string | null;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
