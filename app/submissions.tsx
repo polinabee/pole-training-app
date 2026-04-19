@@ -12,6 +12,7 @@ import {
 import { colors } from '../src/constants/colors';
 import { useAuthStore } from '../src/stores/authStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
+import { flushPendingSubmissions } from '../src/lib/flushSubmissions';
 import { getDb } from '../src/db';
 
 function getIsAdmin(user: { app_metadata?: Record<string, unknown> } | null): boolean {
@@ -61,6 +62,7 @@ export default function SubmissionsScreen() {
   const [local, setLocal] = useState<LocalSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [flushing, setFlushing] = useState(false);
 
   const load = useCallback(async () => {
     // Always load from local queue
@@ -72,19 +74,25 @@ export default function SubmissionsScreen() {
 
     // Load from Supabase if configured
     if (isSupabaseConfigured && supabase) {
-      const query = admin
-        ? supabase
-            .from('trick_submissions')
-            .select('id, name, pole_type, difficulty, notes, status, created_at, user_id')
-            .order('created_at', { ascending: false })
-        : supabase
-            .from('trick_submissions')
-            .select('id, name, pole_type, difficulty, notes, status, created_at, user_id')
-            .eq('user_id', user?.id ?? '')
-            .order('created_at', { ascending: false });
+      let data: RemoteSubmission[] | null = null;
 
-      const { data } = await query;
-      setRemote((data as RemoteSubmission[]) ?? []);
+      if (admin) {
+        const res = await supabase
+          .from('trick_submissions')
+          .select('id, name, pole_type, difficulty, notes, status, created_at, user_id')
+          .order('created_at', { ascending: false });
+        data = res.data as RemoteSubmission[];
+      } else if (user?.id) {
+        // Fetch rows owned by this user OR with no owner (submitted anonymously)
+        const res = await supabase
+          .from('trick_submissions')
+          .select('id, name, pole_type, difficulty, notes, status, created_at, user_id')
+          .or(`user_id.eq.${user.id},user_id.is.null`)
+          .order('created_at', { ascending: false });
+        data = res.data as RemoteSubmission[];
+      }
+
+      setRemote(data ?? []);
     }
 
     setLoading(false);
@@ -92,6 +100,13 @@ export default function SubmissionsScreen() {
   }, [admin, user?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleFlush() {
+    setFlushing(true);
+    await flushPendingSubmissions(user?.id ?? null).catch(() => {});
+    await load();
+    setFlushing(false);
+  }
 
   async function handleApprove(id: string) {
     if (!supabase) return;
@@ -183,7 +198,20 @@ export default function SubmissionsScreen() {
       }
       renderItem={({ item }) => {
         if (item.type === 'header') {
-          return <Text style={styles.sectionHeader}>{item.title}</Text>;
+          const isQueued = item.title === 'Queued (offline)';
+          return (
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeader}>{item.title}</Text>
+              {isQueued && (
+                <TouchableOpacity onPress={handleFlush} disabled={flushing} activeOpacity={0.7}>
+                  {flushing
+                    ? <ActivityIndicator size="small" color={colors.accent} />
+                    : <Text style={styles.sendNowBtn}>Send now</Text>
+                  }
+                </TouchableOpacity>
+              )}
+            </View>
+          );
         }
 
         const status = (item as RemoteSubmission).status ?? 'queued';
@@ -241,14 +269,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   empty: { color: colors.textMuted, fontSize: 15 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 10,
+  },
   sectionHeader: {
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginTop: 20,
-    marginBottom: 10,
+  },
+  sendNowBtn: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: colors.surface,

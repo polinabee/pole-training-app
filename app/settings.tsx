@@ -18,6 +18,7 @@ type Mode = 'sign_in' | 'sign_up';
 export default function SettingsScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const signOut = useAuthStore((s) => s.signOut);
   const [mode, setMode] = useState<Mode>('sign_in');
   const [email, setEmail] = useState('');
@@ -30,22 +31,36 @@ export default function SettingsScreen() {
     setLoading(true);
     try {
       if (mode === 'sign_in') {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
         if (error) throw error;
+        setUser(data.user);
         router.replace('/submissions');
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
         });
         if (error) throw error;
-        router.replace('/submissions');
+        if (data.session) {
+          setUser(data.user);
+          router.replace('/submissions');
+        } else {
+          Alert.alert(
+            'Check your email',
+            'We sent a confirmation link to ' + email.trim() + '. Tap it, then come back and sign in.',
+          );
+          setMode('sign_in');
+        }
       }
     } catch (err: unknown) {
-      Alert.alert('Error', (err as Error).message ?? 'Sign-in failed.');
+      const msg = (err as Error).message ?? 'Sign-in failed.';
+      const friendly = msg.includes('Email not confirmed')
+        ? 'Your email address is not confirmed yet. Check your inbox for a confirmation link, or disable "Confirm email" in your Supabase dashboard.'
+        : msg;
+      Alert.alert('Error', friendly);
     } finally {
       setLoading(false);
     }

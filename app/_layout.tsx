@@ -9,6 +9,8 @@ import { useTricksStore } from '../src/stores/tricksStore';
 import { useSessionsStore } from '../src/stores/sessionsStore';
 import { useVideosStore } from '../src/stores/videosStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { flushPendingSubmissions } from '../src/lib/flushSubmissions';
+import { isSupabaseConfigured } from '../src/lib/supabase';
 import { colors } from '../src/constants/colors';
 
 export default function RootLayout() {
@@ -40,6 +42,11 @@ export default function RootLayout() {
     // Auth + community tricks run in parallel — both gracefully handle offline
     initializeAuth();
     loadCommunityTricks();
+
+    // Flush any locally-queued submissions now that we may be online
+    if (isSupabaseConfigured) {
+      flushPendingSubmissions(null).catch(() => {});
+    }
 
   }, []);
 

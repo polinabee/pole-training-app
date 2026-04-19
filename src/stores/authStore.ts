@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 interface AuthState {
   user: User | null;
   loading: boolean;
+  setUser: (user: User | null) => void;
   signOut: () => Promise<void>;
   initialize: () => void;
 }
@@ -12,6 +13,10 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: false,
+
+  setUser(user) {
+    set({ user });
+  },
 
   initialize() {
     if (!isSupabaseConfigured || !supabase) return;
