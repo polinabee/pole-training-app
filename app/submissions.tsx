@@ -13,32 +13,13 @@ import { colors } from '../src/constants/colors';
 import { useAuthStore } from '../src/stores/authStore';
 import { supabase, isSupabaseConfigured } from '../src/lib/supabase';
 import { flushPendingSubmissions } from '../src/lib/flushSubmissions';
-import { getDb } from '../src/db';
-
-function getIsAdmin(user: { app_metadata?: Record<string, unknown> } | null): boolean {
-  return user?.app_metadata?.is_admin === true;
-}
-
-type RemoteSubmission = {
-  id: string;
-  name: string;
-  pole_type: string;
-  difficulty: number;
-  notes: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
-  user_id: string | null;
-};
-
-type LocalSubmission = {
-  id: string;
-  name: string;
-  pole_type: string;
-  difficulty: number;
-  notes: string | null;
-  created_at: string;
-  status: 'queued';
-};
+import {
+  getIsAdmin,
+  loadLocalQueue,
+  buildSections,
+  type RemoteSubmission,
+  type LocalSubmission,
+} from '../src/lib/submissionsHelpers';
 
 const STATUS_COLOR: Record<string, string> = {
   pending: colors.statusLearning,
@@ -65,12 +46,7 @@ export default function SubmissionsScreen() {
   const [flushing, setFlushing] = useState(false);
 
   const load = useCallback(async () => {
-    // Always load from local queue
-    const db = getDb();
-    const rows = db.getAllSync<LocalSubmission>(
-      'SELECT id, name, pole_type, difficulty, notes, created_at FROM pending_submissions ORDER BY created_at DESC'
-    );
-    setLocal(rows.map((r) => ({ ...r, status: 'queued' as const })));
+    setLocal(loadLocalQueue());
 
     // Load from Supabase if configured
     if (isSupabaseConfigured && supabase) {
@@ -155,20 +131,7 @@ export default function SubmissionsScreen() {
     );
   }
 
-  const sections: { title: string; data: (RemoteSubmission | LocalSubmission)[] }[] = [];
-
-  if (admin && remote.filter((r) => r.status === 'pending').length > 0) {
-    sections.push({ title: 'Pending Review', data: remote.filter((r) => r.status === 'pending') });
-  }
-  if (local.length > 0) {
-    sections.push({ title: 'Queued (offline)', data: local });
-  }
-  const sent = admin
-    ? remote.filter((r) => r.status !== 'pending')
-    : remote;
-  if (sent.length > 0) {
-    sections.push({ title: admin ? 'Reviewed' : 'Your Submissions', data: sent });
-  }
+  const sections = buildSections(remote, local, admin);
 
   const allItems = sections.flatMap((s) => [
     { type: 'header' as const, title: s.title, id: `h-${s.title}` },
