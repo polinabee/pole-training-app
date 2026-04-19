@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   Pressable,
+  TouchableOpacity,
   Text,
   Modal,
 } from 'react-native';
@@ -20,6 +21,7 @@ import type { PoleType, TrickStatus } from '../../src/types';
 export default function LibraryScreen() {
   const router = useRouter();
   const tricks = useTricksStore((s) => s.tricks);
+  const communityTricks = useTricksStore((s) => s.communityTricks);
   const userTricks = useTricksStore((s) => s.userTricks);
   const addCustomTrick = useTricksStore((s) => s.addCustomTrick);
 
@@ -50,8 +52,13 @@ export default function LibraryScreen() {
     return Array.from(all).sort();
   }, [tricks]);
 
+  const allTricks = useMemo(
+    () => [...tricks, ...communityTricks],
+    [tricks, communityTricks]
+  );
+
   const filtered = useMemo(() => {
-    return tricks.filter((t) => {
+    return allTricks.filter((t) => {
       if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (selectedPoleTypes.length > 0 && !selectedPoleTypes.includes(t.poleType)) return false;
       if (selectedDifficulties.length > 0 && !selectedDifficulties.includes(t.difficulty)) return false;
@@ -69,7 +76,7 @@ export default function LibraryScreen() {
       }
       return true;
     });
-  }, [tricks, userTricks, search, selectedPoleTypes, selectedDifficulties, selectedTags, selectedStatuses]);
+  }, [allTricks, userTricks, search, selectedPoleTypes, selectedDifficulties, selectedTags, selectedStatuses]);
 
   function handleAddTrick() {
     if (!newName.trim()) return;
@@ -105,6 +112,24 @@ export default function LibraryScreen() {
         <Pressable style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
           <Text style={styles.addBtnText}>+ Add</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.suggestRow}>
+        <TouchableOpacity
+          onPress={() => router.push('/suggest-trick')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.suggestLink}>+ Suggest a trick</Text>
+        </TouchableOpacity>
+        <View style={styles.suggestRowRight}>
+          <TouchableOpacity onPress={() => router.push('/submissions')} activeOpacity={0.7}>
+            <Text style={styles.metaLink}>My submissions</Text>
+          </TouchableOpacity>
+          <Text style={styles.metaDot}>·</Text>
+          <TouchableOpacity onPress={() => router.push('/settings')} activeOpacity={0.7}>
+            <Text style={styles.metaLink}>Settings</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FilterBar
@@ -276,6 +301,31 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontWeight: '700',
     fontSize: 14,
+  },
+  suggestRow: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  suggestLink: {
+    color: colors.accentDim,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  suggestRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaLink: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  metaDot: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   list: {
     padding: 16,

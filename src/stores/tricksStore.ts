@@ -1,16 +1,20 @@
 import { create } from 'zustand';
 import * as Crypto from 'expo-crypto';
 import { getDb } from '../db';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { Trick, UserTrick, TrickStatus } from '../types';
 
 interface TricksState {
   tricks: Trick[];
   userTricks: UserTrick[];
+  communityTricks: Trick[];
   load: () => void;
+  loadCommunityTricks: () => Promise<void>;
   getUserTrick: (trickId: string) => UserTrick | undefined;
   upsertUserTrick: (trickId: string, patch: Partial<Omit<UserTrick, 'id' | 'trickId'>>) => void;
   addCustomTrick: (trick: Omit<Trick, 'id' | 'isCustom' | 'prerequisiteIds'>) => void;
   deleteCustomTrick: (trickId: string) => void;
+  adminDeleteTrick: (trickId: string) => Promise<void>;
   updateTrickTags: (trickId: string, tags: string[]) => void;
 }
 
@@ -46,6 +50,7 @@ function rowToUserTrick(row: Record<string, unknown>): UserTrick {
 export const useTricksStore = create<TricksState>((set, get) => ({
   tricks: [],
   userTricks: [],
+  communityTricks: [],
 
   load() {
     const db = getDb();
@@ -55,6 +60,29 @@ export const useTricksStore = create<TricksState>((set, get) => ({
       tricks: trickRows.map(rowToTrick),
       userTricks: userTrickRows.map(rowToUserTrick),
     });
+  },
+
+  async loadCommunityTricks() {
+    if (!isSupabaseConfigured || !supabase) return;
+    const { data, error } = await supabase
+      .from('trick_submissions')
+      .select('id, name, pole_type, difficulty, has_sides, tags')
+      .eq('status', 'approved');
+    if (error || !data) return;
+    const community: Trick[] = data.map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      poleType: row.pole_type as Trick['poleType'],
+      difficulty: row.difficulty as number,
+      hasSides: Boolean(row.has_sides),
+      tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+      diagramUrl: null,
+      referenceVideoUrl: null,
+      isCustom: false,
+      prerequisiteIds: [],
+      source: 'community',
+    }));
+    set({ communityTricks: community });
   },
 
   getUserTrick(trickId) {
@@ -150,5 +178,36 @@ export const useTricksStore = create<TricksState>((set, get) => ({
       tricks: state.tricks.filter((t) => t.id !== trickId),
       userTricks: state.userTricks.filter((ut) => ut.trickId !== trickId),
     }));
+  },
+
+  async adminDeleteTrick(trickId) {
+    const db = getDb();
+    const isCommunity = get().communityTricks.some((t) => t.id === trickId);
+
+    // Clean up local tracking data regardless of source
+    db.runSync('DELETE FROM user_tricks WHERE trickId = ?', [trickId]);
+    db.runSync('DELETE FROM session_tricks WHERE trickId = ?', [trickId]);
+    db.runSync('DELETE FROM videos WHERE trickId = ?', [trickId]);
+
+    if (isCommunity) {
+      // Community trick: mark submission as rejected in Supabase
+      if (supabase) {
+        await supabase
+          .from('trick_submissions')
+          .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+          .eq('id', trickId);
+      }
+      set((state) => ({
+        communityTricks: state.communityTricks.filter((t) => t.id !== trickId),
+        userTricks: state.userTricks.filter((ut) => ut.trickId !== trickId),
+      }));
+    } else {
+      // Local trick (seeded or custom): delete from SQLite
+      db.runSync('DELETE FROM tricks WHERE id = ?', [trickId]);
+      set((state) => ({
+        tricks: state.tricks.filter((t) => t.id !== trickId),
+        userTricks: state.userTricks.filter((ut) => ut.trickId !== trickId),
+      }));
+    }
   },
 }));

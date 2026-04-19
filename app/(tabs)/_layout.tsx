@@ -22,6 +22,10 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="index"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="library"
         options={{
           title: 'Library',
@@ -33,6 +37,13 @@ export default function TabsLayout() {
         options={{
           title: 'Sessions',
           tabBarLabel: 'Sessions',
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarLabel: 'Profile',
         }}
       />
     </Tabs>

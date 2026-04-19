@@ -6,6 +6,7 @@ import {
   CREATE_TRAINING_SESSIONS_TABLE,
   CREATE_SESSION_TRICKS_TABLE,
   CREATE_VIDEOS_TABLE,
+  CREATE_PENDING_SUBMISSIONS_TABLE,
 } from './schema';
 
 export function runMigrations(): void {
@@ -15,13 +16,16 @@ export function runMigrations(): void {
   db.execSync(CREATE_TRAINING_SESSIONS_TABLE);
   db.execSync(CREATE_SESSION_TRICKS_TABLE);
   db.execSync(CREATE_VIDEOS_TABLE);
+  // v4 — offline queue for trick submissions
+  db.execSync(CREATE_PENDING_SUBMISSIONS_TABLE);
 
-  // v2 — add title to sessions, reps + completed_reps to session_tricks
-  try { db.execSync('ALTER TABLE training_sessions ADD COLUMN title TEXT'); } catch {}
-  try { db.execSync('ALTER TABLE session_tricks ADD COLUMN reps INTEGER NOT NULL DEFAULT 1'); } catch {}
-  try { db.execSync('ALTER TABLE session_tricks ADD COLUMN completed_reps INTEGER NOT NULL DEFAULT 0'); } catch {}
-  // v3 — pole mode (static/spin) per session trick
-  try { db.execSync('ALTER TABLE session_tricks ADD COLUMN poleMode TEXT'); } catch {}
+  // v2/v3 — add columns if not already present (PRAGMA avoids duplicate-column warnings)
+  const sessionCols = db.getAllSync<{ name: string }>('PRAGMA table_info(training_sessions)').map(r => r.name);
+  const stCols = db.getAllSync<{ name: string }>('PRAGMA table_info(session_tricks)').map(r => r.name);
+  if (!sessionCols.includes('title'))          db.execSync('ALTER TABLE training_sessions ADD COLUMN title TEXT');
+  if (!stCols.includes('reps'))                db.execSync('ALTER TABLE session_tricks ADD COLUMN reps INTEGER NOT NULL DEFAULT 1');
+  if (!stCols.includes('completed_reps'))      db.execSync('ALTER TABLE session_tricks ADD COLUMN completed_reps INTEGER NOT NULL DEFAULT 0');
+  if (!stCols.includes('poleMode'))            db.execSync('ALTER TABLE session_tricks ADD COLUMN poleMode TEXT');
   // v3 — fix poleType for static-only momentum spins
   db.runSync(`UPDATE tricks SET poleType = 'static_only' WHERE name IN ('Chair Spin', 'Fireman Spin', 'Back Hook Spin') AND isCustom = 0`);
   // v3 — add missing tricks to existing (already-seeded) DBs only

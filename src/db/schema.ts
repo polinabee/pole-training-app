@@ -54,3 +54,16 @@ export const CREATE_VIDEOS_TABLE = `
     createdAt TEXT NOT NULL
   );
 `;
+
+export const CREATE_PENDING_SUBMISSIONS_TABLE = `
+  CREATE TABLE IF NOT EXISTS pending_submissions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    pole_type TEXT NOT NULL,
+    difficulty INTEGER NOT NULL,
+    has_sides INTEGER NOT NULL DEFAULT 1,
+    tags TEXT NOT NULL DEFAULT '[]',
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
+`;

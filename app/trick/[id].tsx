@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useTricksStore } from '../../src/stores/tricksStore';
+import { useAuthStore } from '../../src/stores/authStore';
 import { SideStatusPicker } from '../../src/components/SideStatusPicker';
 import { DifficultyDots } from '../../src/components/DifficultyDots';
 import { colors } from '../../src/constants/colors';
@@ -28,12 +29,16 @@ export default function TrickDetailScreen() {
 
   const router = useRouter();
   const tricks = useTricksStore((s) => s.tricks);
+  const communityTricks = useTricksStore((s) => s.communityTricks);
   const userTricks = useTricksStore((s) => s.userTricks);
   const upsertUserTrick = useTricksStore((s) => s.upsertUserTrick);
   const deleteCustomTrick = useTricksStore((s) => s.deleteCustomTrick);
+  const adminDeleteTrick = useTricksStore((s) => s.adminDeleteTrick);
   const updateTrickTags = useTricksStore((s) => s.updateTrickTags);
+  const isAdmin = useAuthStore((s) => s.user?.app_metadata?.is_admin === true);
 
-  const trick = tricks.find((t) => t.id === id);
+  const trick = tricks.find((t) => t.id === id) ?? communityTricks.find((t) => t.id === id);
+  const isCommunity = trick?.source === 'community';
   const userTrick = userTricks.find((ut) => ut.trickId === id);
 
   const [notesLeft, setNotesLeft] = useState(userTrick?.notes_left ?? '');
@@ -83,30 +88,34 @@ export default function TrickDetailScreen() {
             <Text style={[styles.tagText, styles.customTagText]}>custom</Text>
           </View>
         ) : null}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.addTagBtn}
-          onPress={() => tagInputRef.current?.focus()}
-        >
-          <Text style={styles.addTagBtnText}>+ tag</Text>
-        </TouchableOpacity>
+        {!isCommunity && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.addTagBtn}
+            onPress={() => tagInputRef.current?.focus()}
+          >
+            <Text style={styles.addTagBtnText}>+ tag</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <TextInput
-        ref={tagInputRef}
-        style={styles.tagInput}
-        placeholder="New tag..."
-        placeholderTextColor={colors.textDim}
-        value={tagInput}
-        onChangeText={setTagInput}
-        returnKeyType="done"
-        onSubmitEditing={() => {
-          const tag = tagInput.trim().toLowerCase();
-          if (tag && !trick.tags.includes(tag)) {
-            updateTrickTags(trick.id, [...trick.tags, tag]);
-          }
-          setTagInput('');
-        }}
-      />
+      {!isCommunity && (
+        <TextInput
+          ref={tagInputRef}
+          style={styles.tagInput}
+          placeholder="New tag..."
+          placeholderTextColor={colors.textDim}
+          value={tagInput}
+          onChangeText={setTagInput}
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            const tag = tagInput.trim().toLowerCase();
+            if (tag && !trick.tags.includes(tag)) {
+              updateTrickTags(trick.id, [...trick.tags, tag]);
+            }
+            setTagInput('');
+          }}
+        />
+      )}
 
       <View style={styles.divider} />
 
@@ -163,10 +172,32 @@ export default function TrickDetailScreen() {
         </Section>
       )}
 
+      {/* Suggest edit — only for built-in (non-custom) tricks */}
+      {!trick.isCustom ? (
+        <TouchableOpacity
+          style={styles.suggestEditBtn}
+          activeOpacity={0.7}
+          onPress={() =>
+            router.push({
+              pathname: '/suggest-trick',
+              params: {
+                prefillName: trick.name,
+                prefillPoleType: trick.poleType,
+                prefillDifficulty: String(trick.difficulty),
+                prefillHasSides: String(trick.hasSides),
+                prefillTags: JSON.stringify(trick.tags),
+              },
+            })
+          }
+        >
+          <Text style={styles.suggestEditBtnText}>Suggest edit</Text>
+        </TouchableOpacity>
+      ) : null}
+
       <View style={styles.divider} />
 
-      {/* Delete (custom tricks only) */}
-      {trick.isCustom ? (
+      {/* Delete */}
+      {(trick.isCustom || isAdmin) ? (
         <>
           <View style={styles.divider} />
           <Pressable
@@ -177,7 +208,14 @@ export default function TrickDetailScreen() {
                 {
                   text: 'Delete',
                   style: 'destructive',
-                  onPress: () => { deleteCustomTrick(trick.id); router.back(); },
+                  onPress: () => {
+                    if (isAdmin) {
+                      adminDeleteTrick(trick.id).then(() => router.back());
+                    } else {
+                      deleteCustomTrick(trick.id);
+                      router.back();
+                    }
+                  },
                 },
               ])
             }
@@ -302,6 +340,19 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     color: colors.error,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  suggestEditBtn: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  suggestEditBtnText: {
+    color: colors.textMuted,
     fontWeight: '600',
     fontSize: 14,
   },
