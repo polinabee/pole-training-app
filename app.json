@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.pos-pole"
+      "bundleIdentifier": "com.polinab.pospole"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +23,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.polinab.pospole"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,7 +33,6 @@
       "expo-router",
       "expo-asset",
       "expo-font",
-      "expo-apple-authentication",
       "expo-secure-store"
     ]
   }
